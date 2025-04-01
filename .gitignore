@@ -1,3 +1,10 @@
+# Ignore everything in these folders
 /Data/*
 /Output/*
+
+# But keep the folders themselves
+!/Data/.gitkeep
+!/Output/.gitkeep
+
+# Ignore macOS metadata
 .DS_Store
