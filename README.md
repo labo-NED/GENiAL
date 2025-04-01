@@ -49,7 +49,7 @@ _Select interpreter_
 - F = Father
 - S = Sibling
 - P = Proband
-- O = Other (10093_O => grand mere)
+- O = Other (GM)
 - C = Child
 
 ## Renamed columns
