@@ -101,22 +101,76 @@ def categorize_family_member_type(id_value):
 def main():
     print("Starting database preparation...")
     
-    # Import Data
+    # Import Data with more robust parameters
     print("Importing data files...")
-    df = pd.read_csv(original_demog_genetics_data)
-    dia_cogn_df = pd.read_csv(original_dia_cogn_data)
-    eeg_rs_features_df = pd.read_csv(original_demog_genetics_data)
-    cnv_hg19_df = pd.read_csv(cnv_prediction_hg19_data)
-    cnv_hg38_df = pd.read_csv(cnv_prediction_hg38_data)
-    id_map_df = pd.read_csv(id_map)
+    df = pd.read_csv(original_demog_genetics_data, 
+                     on_bad_lines='warn',
+                     low_memory=False,
+                     quoting=1,
+                     encoding='utf-8')
+    
+    print("\nInitial columns:")
+    print(df.columns.tolist())
+    
+    # Strip spaces from column names
+    df.columns = df.columns.str.strip()
+    
+    print("\nColumns after stripping spaces:")
+    print(df.columns.tolist())
+    
+    # Create a new mapping with stripped keys
+    stripped_mapping = {k.strip(): v for k, v in column_mapping.items()}
+    
+    # Verify all columns that were renamed exist in the dataframe
+    print("\nVerifying columns...")
+    missing_columns = []
+    for orig_col in stripped_mapping.keys():
+        if orig_col not in df.columns:
+            missing_columns.append(orig_col)
 
-    print("Processing data...")
+    if missing_columns:
+        print("\nWarning: The following original columns from column_mapping are missing in the dataframe:")
+        for col in missing_columns:
+            print(f"- {col}")
+        print("\nAvailable columns in the dataframe:")
+        for col in df.columns:
+            print(f"- {col}")
+    
+    # Drop Event Name column
+    if 'Event Name' in df.columns:
+        df = df.drop(columns=['Event Name'])
+    
+    # Merge rows with same Record ID
+    if 'Record ID' in df.columns:
+        print("\nMerging rows with same Record ID...")
+        # First, identify the column for ParticipantID before renaming
+        participant_id_col = 'Enter in the box participant\'s EEG code as written here :  [intake_arm1][q1k_relative_idgenerated_1] [intake_arm1][q1k_proband_id_1]'
+        
+        def merge_rows(group):
+            # For ParticipantID: take first non-null value
+            participant_id = group[participant_id_col].dropna().iloc[0] if not group[participant_id_col].dropna().empty else group[participant_id_col].iloc[0]
+            
+            # For all other columns: take the first value
+            result = group.iloc[0].copy()
+            result[participant_id_col] = participant_id
+            return result
+        
+        # Group by Record ID and apply the merge function
+        df = df.groupby('Record ID', as_index=False).apply(merge_rows)
+    else:
+        print("Warning: 'Record ID' column not found")
+        print("Available columns:", df.columns.tolist())
+
     # Keep only first age column and rename it
     age_cols = [col for col in df.columns if col == "Age in years"]
-    df = df.rename(columns={age_cols[0]: "Age at EEG (years)"})
+    if age_cols:
+        df = df.rename(columns={age_cols[0]: "Age at EEG (years)"})
 
-    # Rename columns using the mapping dictionary
-    df = df.rename(columns=column_mapping)
+    # Rename columns using the stripped mapping
+    print("\nRenaming columns...")
+    print("Before renaming, columns are:", df.columns.tolist())
+    df = df.rename(columns=stripped_mapping)
+    print("After renaming, columns are:", df.columns.tolist())
 
     # Add family member type
     df['ParticipantID'] = df['ParticipantID'].astype('str')
@@ -128,30 +182,22 @@ def main():
     cnv_hg38_df = cnv_hg38_df.merge(id_map_df, on='ID', how='left')
     cnv_df = pd.concat([cnv_hg19_df, cnv_hg38_df], axis=0)
 
-    # Force ParticipantID to be a string
+    # Force ParticipantID to be a string and strip spaces
     cnv_df['ParticipantID'] = cnv_df['ParticipantID'].astype(str).str.strip()
     df['ParticipantID'] = df['ParticipantID'].astype(str).str.strip()
     cnv_df.columns = cnv_df.columns.str.strip()
     df.columns = df.columns.str.strip()
 
-    # Keep only the columns we want
-    columns_to_keep = list(column_mapping.values()) + ['family_member_type'] + ['Record ID']
-    df = df[columns_to_keep]
-
-    # Merge by record ID
-    df = df.groupby('Record ID', as_index=False).first()
-
-    # Drop Record ID column
-    df = df.drop(columns=['Record ID'])
-
-    # Convert diagnosis and inheritance columns from Checked/Unchecked to binary 1/0
-    diag_cols = [col for col in df.columns if col.startswith('diag_')]
-    inheritance_cols = [col for col in df.columns if col.startswith('inheritance_')]
-    for col in diag_cols + inheritance_cols:
-        df[col] = df[col].map({'Checked': 1, 'Unchecked': 0})
+    # Keep only the columns we want that actually exist
+    print("\nFinal column selection:")
+    columns_to_keep = list(stripped_mapping.values()) + ['family_member_type']
+    print("Desired columns:", columns_to_keep)
+    available_columns = [col for col in columns_to_keep if col in df.columns]
+    print("Available columns:", available_columns)
+    df = df[available_columns]
 
     # Save the final preprocessed data
-    print(f"Saving preprocessed data to: {preprocessed_data_path}")
+    print(f"\nSaving preprocessed data to: {preprocessed_data_path}")
     df.to_csv(preprocessed_data_path, index=False)
     print("Done!")
 
