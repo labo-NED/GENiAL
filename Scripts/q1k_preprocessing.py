@@ -113,6 +113,13 @@ def clean_variables(input_csv, output_csv):
     df.to_csv(output_csv, index=False)
     print(f'Cleaned variables saved to: {output_csv}')
 
+def rename_columns(df):
+    df = df.rename(columns={
+    'eeg_birthdate_v2_v2': 'birthday',
+    'eeg_age_years_testdate': 'eeg_test_age',
+    })
+
+    return df
 
 def merge_cnv_data(df_path, hg19_path, hg38_path, output_path):
     df = pd.read_csv(df_path)  # cleaned CSV
@@ -142,9 +149,88 @@ def merge_cnv_data(df_path, hg19_path, hg38_path, output_path):
     # Now merge with the main dataframe
     df = pd.merge(df, merged_cnv, on='record_id', how='left')
 
+    df = rename_columns(df)
+
     # Save the merged dataframe
     df.to_csv(output_path, index=False)
     print(f'Merged CNV data saved to: {output_path}')
-
-
     
+# Create new diagnosis columns based on the specified logic
+def create_diagnosis_columns(df, output_path):
+    # ASD - check ghf_asd first, then diag_asd (2 = confirmed)
+    df['ASD'] = df['ghf_asd'].fillna(df['diag_asd'].map({2: 1}).fillna(0))
+    
+    # ASD behavior
+    df['ASD_behavior'] = df['ghf_autistic_behav']
+    
+    # ADHD - check ghf_adhd first, then diag_adhd (2 = confirmed)
+    df['ADHD'] = df['ghf_adhd'].fillna(df['diag_adhd'].map({2: 1}).fillna(0))
+    
+    # ID - check ghf_id first, then diag_intel (2 = confirmed)
+    df['ID'] = df['ghf_id'].fillna(df['diag_intel'].map({2: 1}).fillna(0))
+    
+    # OCD
+    df['OCD'] = df['cfq_ment_ocd_2']
+    
+    # Motor disorder - combine diag_motor (2 = confirmed) and cfq_ment_ts_2
+    df['motor_disorder'] = df['diag_motor'].map({2: 1}).fillna(df['cfq_ment_ts_2']).fillna(0)
+    
+    # Anxiety - combine ghf_anxiety and cfq_ment_ad_2
+    df['anxiety'] = df['ghf_anxiety'].fillna(df['cfq_ment_ad_2'])
+    
+    # Neurological conditions (convert to binary: 1 if 'Yes' (1), 0 otherwise)
+    df['neurological_conditions'] = df['ghf_neuro'].map({1: 1, 3: 0, 2: 0}).fillna(0).astype(int)
+    
+    # Genetic disorder (2 = confirmed)
+    df['genetic_disorder'] = df['diag_gene'].map({2: 1}).fillna(0)
+    
+    # Other conditions - combine all remaining diagnosis columns
+    other_columns = [
+        # Columns for "other" diagnosis, based on the image and context
+        'cfq_ment_dd_2',                  # Depression Disorder
+        'cfq_ment_bd_2',                  # Bipolar Disorder
+        'cfq_ment_psyep_2',               # Psychosis Episodes
+        'cfq_ment_schizo_2',              # Schizophrenia
+        'cfq_ment_epilepsy_2',            # Epilepsy
+        'cfq_ment_hearing_disability_2',  # Hearing disability, such as deafness
+        'cfq_ment_visual_disability_2',   # Visual disability, such as blindness
+        'ghf_cog_imp',                     # Cognitive impairment
+        'ghf_li',                          # Learning impairment
+        'ghf_ld',                          # Language disorder
+        'ghf_delay_fmd',                   # Delay in motor development
+        'ghf_agg_behav',                   # Aggressive behavior
+        'ghf_li',                          # Learning impairment
+        'diag_comm',                       # Communication disorder (2 = confirmed)
+        'diag_hearing',                    # Hearing disability (2 = confirmed)
+        'diag_visual',                     # Visual disability (2 = confirmed)
+        'diag_phys',                       # Physical disability (2 = confirmed)
+        'diag_oth',                        # Other (2 = confirmed)
+        'diag_susp_other'                  # Suspicious other (2 = confirmed)
+    ]
+    
+    # Create 'other' column by combining all other conditions
+    # Convert diag_ columns to binary (2 = 1, else 0)
+    for col in other_columns:
+        if col.startswith('diag_'):
+            df[col] = df[col].map({2: 1}).fillna(0)
+    
+    # Create 'other' column by checking if any of the conditions are present (1)
+    # Only count as 1 if at least one condition is present, otherwise 0
+    df['other'] = df[other_columns].apply(lambda x: 1 if x.any() else 0, axis=1)
+    
+    # Save the new dataframe
+    df.to_csv(output_path, index=False)
+    print(f'Database with new columns saved to: {output_path}')
+
+def create_IQ_column(df, output_path):
+    # Create a new column 'IQ' that takes the value from the first non-null IQ score column
+    iq_columns = [
+        'wais_globalapt_comp',
+        'wisc_gai_is',
+        'wppsi_47_gaisco_',
+        'leiter3_full_iq'
+    ]
+    df['IQ'] = df[iq_columns].bfill(axis=1).iloc[:, 0]
+    # Save the new dataframe with the IQ column
+    df.to_csv(output_path, index=False)
+    print(f'Database with IQ column saved to: {output_path}')

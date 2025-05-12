@@ -19,6 +19,19 @@ _Select interpreter_
 ```Python: Select Interpreter```  
 ```Python 3.x.x 64-bit ('venv': venv)```  
 
+# Steps
+
+## STEP 0 - Clean and prepare database
+1. Import `ECN-EEG-IQ-GEN-CHUSJ` from REDCap.
+2. Save it in your `/Data` folder.
+3. Run all sections of `GENiAL_STEP0_prep_files.ipynb` until `Prep for CNV`.
+4. Run the `Prep for CNV`. This section will prepare the files you will need to input to the online CNV calculator.
+5. Save the CNV outputs to the `/Data/Genetics/CNV-Output` folder.
+6. Run the last section of `GENiAL_STEP0_prep_files.ipynb`.
+
+## STEP 1 - Preprocessing
+1. 
+
 # Database
 
 ## Preprocessing
