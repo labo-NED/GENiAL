@@ -7,7 +7,12 @@ def combine_rows(group):
     combined = {}
     for col in group.columns:
         # Get all non-empty, non-NaN, non-null values as strings
-        vals = group[col].dropna().astype(str)
+        vals = group[col]
+        # print(f"Column: {col}, Type: {type(vals)}")  # Debug print
+        if isinstance(vals, pd.DataFrame):
+            # print(f"DataFrame shape for {col}: {vals.shape}")
+            vals = vals.iloc[:, 0]
+        vals = vals.dropna().astype(str)
         vals = vals[vals.str.strip() != '']
         
         # If there are any non-empty values, take the first one
@@ -22,7 +27,7 @@ def combine_rows(group):
 def flatten_csv(input_csv, output_csv):
     # Read the CSV
     df = pd.read_csv(input_csv, dtype=str, on_bad_lines='skip')
-    
+
     # Drop the specified columns (strip spaces in column names)
     df.columns = df.columns.str.strip()
     df = df.drop(columns=[
