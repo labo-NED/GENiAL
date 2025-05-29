@@ -26,8 +26,24 @@ end
 % === Band labels for periodic PSD (AUC) ===
 band_labels = {'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'};
 
+% === Extract SubjectID and Task from filenames ===
+SubjectID = cell(size(feature.name));
+Task = cell(size(feature.name));
+expr = '^(.*?)_((?i)RSRIO|RS)(?:_|$)';
+
+for i = 1:numel(feature.name)
+    tokens = regexp(feature.name{i}, expr, 'tokens');
+    if ~isempty(tokens)
+        SubjectID{i} = tokens{1}{1};
+        Task{i} = upper(tokens{1}{2});
+    else
+        SubjectID{i} = '';
+        Task{i} = '';
+    end
+end
+
 % === Initialize result table ===
-T = table(feature.name(:), 'VariableNames', {'SubjectID'});
+T = table(SubjectID(:), Task(:), 'VariableNames', {'SubjectID', 'Task'});
 nSub = size(feature.offset, 1);
 
 % === Loop through ROIs and compute feature means ===
