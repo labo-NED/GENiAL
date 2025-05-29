@@ -29,8 +29,19 @@ _Select interpreter_
 5. Save the CNV outputs to the `/Data/Genetics/CNV-Output` folder.
 6. Run the last section of `GENiAL_STEP0_prep_files.ipynb`.
 
+_EEG PREPROCESSING_
+1. Gather Raw EEGs and save on a HARD DRIVE.
+2. Follow HAPPE preprocessing pipeline from [lab's repository]{https://github.com/labo-NED/EEG_preprocessing_pipeline}.
+2.1 Run preprocessing with 2s parameters (for all power feature extraction)
+2.2 Run preprocessing with 5s parameters (needed for entropy feature extraction)
+ *NOTE* _This preprocessing step might take 4 days for each preprocessing (2s and 5s)._
+3. Run `MATLAB/feature_extraction.m` in MATLAB. This will extract power features.
+4. Run `TODO` in MATLAB. This will extract entropy features.
+5. RUN `MATLAB/roi_features_to_csv.m` in MATLAB. This concatenates features per subject and ROIs.
+*NOTE* _The final CSV data is saved in "TO DO"._
+
 ## STEP 1 - Preprocessing
-1. 
+1. Combine EEG and demog/diag data.
 
 # Database
 
