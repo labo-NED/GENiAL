@@ -204,7 +204,6 @@ def create_diagnosis_columns(df, output_path):
         'ghf_ld',                          # Language disorder
         'ghf_delay_fmd',                   # Delay in motor development
         'ghf_agg_behav',                   # Aggressive behavior
-        'ghf_li',                          # Learning impairment
         'diag_comm',                       # Communication disorder (2 = confirmed)
         'diag_hearing',                    # Hearing disability (2 = confirmed)
         'diag_visual',                     # Visual disability (2 = confirmed)
