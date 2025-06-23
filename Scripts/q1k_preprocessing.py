@@ -189,10 +189,12 @@ def create_diagnosis_columns(df, output_path):
     df['anxiety'] = df['ghf_anxiety'].fillna(df['cfq_ment_ad_2'])
     
     # Neurological conditions (convert to binary: 1 if 'Yes' (1), 0 otherwise)
-    df['neurological_conditions'] = df['ghf_neuro'].map({1: 1, 3: 0, 2: 0}).fillna(0).astype(int)
+    # Map: '1'=Yes, all others=0
+    df['neurological_conditions'] = df['ghf_neuro'].str.strip().replace('', np.nan).map({'1': 1}).fillna(0).astype('Int64')
     
     # Genetic disorder (2 = confirmed)
-    df['genetic_disorder'] = df['diag_gene'].map({2: 1}).fillna(0)
+    # Map: '2'=Yes, all others=0
+    df['genetic_disorder'] = df['diag_gene'].str.strip().replace('', np.nan).map({'2': 1}).fillna(0).astype('Int64')
     
     # Other conditions - combine all remaining diagnosis columns
     other_columns = [
@@ -217,15 +219,25 @@ def create_diagnosis_columns(df, output_path):
         'diag_susp_other'                  # Suspicious other (2 = confirmed)
     ]
     
-    # Create 'other' column by combining all other conditions
-    # Convert diag_ columns to binary (2 = 1, else 0)
+    # Convert diag_ columns to binary (2 = 1, else 0) before checking for 'other'
     for col in other_columns:
         if col.startswith('diag_'):
             df[col] = df[col].map({2: 1}).fillna(0)
     
     # Create 'other' column by checking if any of the conditions are present (1)
     # Only count as 1 if at least one condition is present, otherwise 0
-    df['other'] = df[other_columns].apply(lambda x: 1 if x.any() else 0, axis=1)
+    # Convert all other_columns to numeric first, then check if any equals 1
+    other_df = df[other_columns].apply(lambda col: pd.to_numeric(col, errors='coerce'))
+    df['other'] = (other_df == 1).any(axis=1).astype(int)
+    
+    # Convert all diagnosis columns to integers to ensure they're numeric
+    diagnosis_columns = [
+        'ASD', 'ASD_behavior', 'ADHD', 'ID', 'OCD', 'motor_disorder',
+        'anxiety', 'neurological_conditions', 'genetic_disorder', 'other'
+    ]
+    
+    for col in diagnosis_columns:
+        df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')  # Use nullable integer type
     
     # Save the new dataframe
     df.to_csv(output_path, index=False)
