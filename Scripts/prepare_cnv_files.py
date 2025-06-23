@@ -38,3 +38,4 @@ def prepare_cnv_inputs(clean_db_csv, hg19_input, hg38_input):
     df_38.to_csv(hg38_input, sep='\t', index=False)
     df_19.to_csv(hg19_input, sep='\t', index=False)
     print('TSV input files saved and ready for CNV calculations.')
+

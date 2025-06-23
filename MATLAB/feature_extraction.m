@@ -112,7 +112,7 @@ for sub = 1:length(names)
     end
 end
 
-%% --- Save Extracted Features (Without Entropy) ---
+% Save only variables that exist
 clear feature
 feature.aperiodic_component_t = aperiodic_component_t;
 feature.fooof_results_t = fooof_results_t;
@@ -125,18 +125,13 @@ feature.periodic_PSD = periodic_PSD;
 feature.periodic_PSD_m = periodic_PSD_m;
 feature.PSD = PSD;
 feature.relative_PSD = relative_PSD;
-feature.APF_fooof = APF_fooof;
-feature.APF_fooof_ROI = APF_fooof_ROI;
-feature.sgf_t = sgf_t;
 feature.hurst = hurst';
 feature.pxx_t = pxx_t;
 feature.name = names;
 
-% Optional: Remove or comment out undefined fields if not computed yet
-% feature.SE = SE;
-% feature.CI = CI;
-% feature.CI_lowScale = CI_lowScale;
-% feature.CI_highScale = CI_highScale;
-% feature.MSE = mean_mse;
+% Only include optional fields if they exist
+if exist('APF_fooof', 'var'), feature.APF_fooof = APF_fooof; end
+if exist('APF_fooof_ROI', 'var'), feature.APF_fooof_ROI = APF_fooof_ROI; end
+if exist('sgf_t', 'var'), feature.sgf_t = sgf_t; end
 
 save(fullfile(directory, 'feature.mat'), 'feature');

@@ -128,14 +128,19 @@ def rename_columns(df):
 
 def merge_cnv_data(df_path, hg19_path, hg38_path, output_path):
     df = pd.read_csv(df_path)  # cleaned CSV
-    hg19 = pd.read_csv(hg19_path, sep='\t')  # output from CNV tool
-    hg38 = pd.read_csv(hg38_path, sep='\t')  # output from CNV tool
+    hg19 = pd.read_csv(hg19_path, sep='\\t', engine='python')  # output from CNV tool
+    hg38 = pd.read_csv(hg38_path, sep='\\t', engine='python')  # output from CNV tool
+
+    # Clean up column names on all dataframes
+    df.columns = df.columns.str.strip()
+    hg19.columns = hg19.columns.str.strip().str.replace('"', '')
+    hg38.columns = hg38.columns.str.strip().str.replace('"', '')
 
     # Drop specified columns from hg19 and hg38 dataframes
     columns_to_drop = ["CHR", "START", "STOP", "TYPE", "warningSize", "warningSegDup", "warningDNM_NDD"]
     hg19 = hg19.drop(columns=columns_to_drop, errors='ignore')
     hg38 = hg38.drop(columns=columns_to_drop, errors='ignore')
-
+    
     # Rename ID to record_id
     hg19 = hg19.rename(columns={'ID': 'record_id'})
     hg38 = hg38.rename(columns={'ID': 'record_id'})
@@ -238,3 +243,106 @@ def create_IQ_column(df, output_path):
     # Save the new dataframe with the IQ column
     df.to_csv(output_path, index=False)
     print(f'Database with IQ column saved to: {output_path}')
+
+def merge_selected_cnv_columns(main_csv, tsv_path, output_csv):
+    # Read main file
+    main_df = pd.read_csv(main_csv)
+    main_df.columns = main_df.columns.str.strip()
+
+    # Read CNV .tsv file and clean columns
+    cnv = pd.read_csv(tsv_path, sep='\t', engine='python')
+    cnv.columns = cnv.columns.str.strip().str.replace('"', '')
+
+    # Select only the columns of interest
+    cols_to_keep = [
+        'ID', 'Genes', 'NVIQ_CIupr', 'ORASD_upr', 'SRS_CIupr', 'PdN_CIupr', 'sum_LOEUF_complete'
+    ]
+    cnv = cnv[cols_to_keep]
+
+    # Merge on ID (tsv) and record_id (main)
+    main_df['record_id'] = main_df['record_id'].astype(str).str.strip()
+    cnv['ID'] = cnv['ID'].astype(str).str.strip()
+    merged = pd.merge(main_df, cnv, left_on='record_id', right_on='ID', how='left')
+
+    # Rename columns
+    rename_dict = {
+        'NVIQ_CIupr': 'Estimated loss of Non-Verbal Intelligence Quotient',
+        'ORASD_upr': 'Estimated odds ratio for autism',
+        'SRS_CIupr': 'Estimated gain of raw score of Social Responsiveness Scale',
+        'PdN_CIupr': 'Estimated probability of being de novo',
+        'sum_LOEUF_complete': 'Sum LOEUF'
+    }
+    merged = merged.rename(columns=rename_dict)
+
+    # Save
+    merged.to_csv(output_csv, index=False)
+    print(f"Merged and saved to: {output_csv}")
+
+def _clean_cnv_file(path, cols_to_keep):
+    """Helper function to clean and process CNV files."""
+    try:
+        # Try reading with different options to handle malformed quotes
+        cnv = pd.read_csv(path, sep='\\t', engine='python', quoting=3)  # QUOTE_NONE
+    except Exception as e:
+        try:
+            cnv = pd.read_csv(path, sep='\\t', engine='c', on_bad_lines='skip')
+        except Exception as e2:
+            cnv = pd.read_csv(path, sep='\\t', engine='python', on_bad_lines='skip', quotechar=None)
+    
+    cnv.columns = cnv.columns.str.strip().str.replace('"', '')
+    cnv = cnv[cols_to_keep]
+    
+    # Clean the ID column properly - remove quotes and strip whitespace
+    cnv['ID'] = cnv['ID'].astype(str).str.replace('"', '').str.strip()
+    
+    return cnv
+
+def merge_selected_cnv_columns_dual(main_csv, hg19_tsv, hg38_tsv, output_csv):
+    # Read main file
+    main_df = pd.read_csv(main_csv, on_bad_lines='skip')
+    main_df.columns = main_df.columns.str.strip()
+
+    # Define columns to keep
+    cols_to_keep = [
+        'ID', 'Genes', 'NVIQ_CIupr', 'ORASD_upr', 'SRS_CIupr', 'PdN_CIupr', 'sum_LOEUF_complete'
+    ]
+
+    # Clean both CNV files
+    cnv19 = _clean_cnv_file(hg19_tsv, cols_to_keep)
+    cnv38 = _clean_cnv_file(hg38_tsv, cols_to_keep)
+
+    # Merge the two CNV tables, preferring non-null values from hg38, then hg19
+    cnv_merged = pd.merge(cnv19, cnv38, on='ID', how='outer', suffixes=('_19', '_38'))
+
+    # For each column, prefer hg38 if available, else hg19
+    merged_cnv = pd.DataFrame()
+    merged_cnv['ID'] = cnv_merged['ID']
+    merged_cnv['Genes'] = cnv_merged['Genes_38'].combine_first(cnv_merged['Genes_19'])
+    merged_cnv['NVIQ_CIupr'] = cnv_merged['NVIQ_CIupr_38'].combine_first(cnv_merged['NVIQ_CIupr_19'])
+    merged_cnv['ORASD_upr'] = cnv_merged['ORASD_upr_38'].combine_first(cnv_merged['ORASD_upr_19'])
+    merged_cnv['SRS_CIupr'] = cnv_merged['SRS_CIupr_38'].combine_first(cnv_merged['SRS_CIupr_19'])
+    merged_cnv['PdN_CIupr'] = cnv_merged['PdN_CIupr_38'].combine_first(cnv_merged['PdN_CIupr_19'])
+    merged_cnv['sum_LOEUF_complete'] = cnv_merged['sum_LOEUF_complete_38'].combine_first(cnv_merged['sum_LOEUF_complete_19'])
+
+    # Merge with main file
+    main_df['record_id'] = main_df['record_id'].astype(str).str.strip()
+    merged_cnv['ID'] = merged_cnv['ID'].astype(str).str.strip()
+    merged = pd.merge(main_df, merged_cnv, left_on='record_id', right_on='ID', how='left')
+
+    # Rename columns
+    rename_dict = {
+        'NVIQ_CIupr': 'Estimated loss of Non-Verbal Intelligence Quotient',
+        'ORASD_upr': 'Estimated odds ratio for autism',
+        'SRS_CIupr': 'Estimated gain of raw score of Social Responsiveness Scale',
+        'PdN_CIupr': 'Estimated probability of being de novo',
+        'sum_LOEUF_complete': 'Sum LOEUF'
+    }
+    merged = merged.rename(columns=rename_dict)
+
+    # Drop the duplicate ID column from the merge
+    if 'ID' in merged.columns:
+        merged = merged.drop(columns=['ID'])
+
+    # Save
+    merged.to_csv(output_csv, index=False)
+    print(f"Merged and saved to: {output_csv}")

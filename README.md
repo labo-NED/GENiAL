@@ -48,7 +48,7 @@ _EEG PREPROCESSING_
 ## Preprocessing
 | Initial Item              | Renamed/processed                                      | New  |
 | ------------------------- | ------------------------------------------------------ | ---- |
-| ParticipantID             | ParticipantID                                          | No   |
+| Participant_id             | Participant_id                                          | No   |
 | EEG site                  | EEG site                                               | No   |
 | Birthdate                 | Birthdate                                              | No   |
 | EEG date                  | EEG date                                               | No   |
@@ -98,3 +98,45 @@ _EEG PREPROCESSING_
 - Hg19 and Hg38
 - One participant excluded for Hg18 genome version (cannot calculate CNV related risk).
 - One participant excluded for lack of START/STOP boundary info (Turner only).
+
+## Demographic Data Mapping
+The `Scripts/clean_demographics.py` script cleans and transforms the raw demographic data from `Data/Q1KDatabase-ECNDEMOG_DATA.csv`. The following mappings are applied.
+
+### Relation to Proband (`relation_to_proband`)
+| Code | Description      |
+| ---- | ---------------- |
+| 1    | Yourself         |
+| 2    | Parent/Caregiver |
+
+### Household Income (`household_income`)
+| Code | Description           |
+| ---- | --------------------- |
+| 1    | Less than $20,000     |
+| 2    | $20,000 - $39,999     |
+| 3    | $40,000 - $59,999     |
+| 4    | $60,000 - $79,999     |
+| 5    | $80,000 - $99,999     |
+| 6    | $100,000 - $149,999   |
+| 7    | $150,000 - $199,999   |
+| 8    | $200,000 - $249,999   |
+| 9    | $250,000 - $399,999   |
+| 10   | >$400,000             |
+
+### Highest Education Level (`highest_education_level`)
+| Code | Description                                                   |
+| ---- | ------------------------------------------------------------- |
+| 1    | Elementary school or less                                     |
+| 2    | Some high school                                              |
+| 3    | High school diploma or certificate                            |
+| 4    | Apprenticeship or other trades certificate or diploma         |
+| 5    | College, CEGEP or other non-university certificate or diploma |
+| 6    | Bachelor's degree                                             |
+| 8    | Master's degree                                               |
+| 9    | Doctorate                                                     |
+| 10   | Other                                                         |
+
+### Family Ethnicity (`family_ethnicity`)
+This column is created by merging the following one-hot encoded ethnicity columns into a single comma-separated string:
+`Indigenous`, `Arab`, `Black`, `Chinese`, `Filipino`, `Japanese`, `Korean`, `Latin_American`, `South_Asian`, `Southeast_Asian`, `West_Asian`, `White_Caucasian`, `Other_ethnicity`.
+
+If a participant has no specified ethnicity, the value is set to `Unknown`.

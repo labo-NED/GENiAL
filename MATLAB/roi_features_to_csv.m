@@ -6,14 +6,25 @@ sample_set = fullfile('/Volumes/NED_Backup3/Q1K_Preprocessed_Happe/5 - processed
 chan_labels = {EEG.chanlocs.labels};
 theta = [EEG.chanlocs.theta];
 
-% === Define ROIs by angle (theta in degrees) ===
+% === Define ROIs by channel names ===
+F  = {'Fp1','Fp2','F3','Fz','F4'};
+Cz = {'FC1','FC2','C3','Cz','C4','CP1','CP2'};
+TR = {'F8','FC6','T8'};
+TL = {'F7','FC5','T7'};
+PR = {'CP6','P4','P8'};
+PL = {'CP5','P3','P7'};
+Oz = {'Pz','O1','Oz','O2'};
+WB = {chan_labels{:}}; % All channels
+
 ROIs = struct();
-ROIs.Frontal    = chan_labels(theta >= -90 & theta <= 90);
-ROIs.Central    = chan_labels(abs(theta) < 30);
-ROIs.Parietal   = chan_labels((theta > 90 & theta <= 135) | (theta < -90 & theta >= -135));
-ROIs.Occipital  = chan_labels(theta > 135 | theta < -135);
-ROIs.Temporal_L = chan_labels(theta > 30 & theta <= 90);
-ROIs.Temporal_R = chan_labels(theta < -30 & theta >= -90);
+ROIs.F  = F;
+ROIs.Cz = Cz;
+ROIs.TR = TR;
+ROIs.TL = TL;
+ROIs.PR = PR;
+ROIs.PL = PL;
+ROIs.Oz = Oz;
+ROIs.WB = WB;
 
 % === Convert channel names to indices ===
 ROI_indices = struct();
