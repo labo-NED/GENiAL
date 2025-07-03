@@ -269,34 +269,34 @@ def merge_cnv_data(df_path, hg19_path, hg38_path, output_path):
 # Create new diagnosis columns based on the specified logic
 def create_diagnosis_columns(df, output_path):
     # ASD - check ghf_asd first, then diag_asd (2 = confirmed)
-    df['ASD'] = df['ghf_asd'].fillna(df['diag_asd'].map({2: 1}).fillna(0))
+    df['ASD'] = df['ghf_asd'].fillna(df['diag_asd'].map({2: 1}))
     
     # ASD behavior
     df['ASD_behavior'] = df['ghf_autistic_behav']
     
     # ADHD - check ghf_adhd first, then diag_adhd (2 = confirmed)
-    df['ADHD'] = df['ghf_adhd'].fillna(df['diag_adhd'].map({2: 1}).fillna(0))
+    df['ADHD'] = df['ghf_adhd'].fillna(df['diag_adhd'].map({2: 1}))
     
     # ID - check ghf_id first, then diag_intel (2 = confirmed)
-    df['ID'] = df['ghf_id'].fillna(df['diag_intel'].map({2: 1}).fillna(0))
+    df['ID'] = df['ghf_id'].fillna(df['diag_intel'].map({2: 1}))
     
     # OCD
     df['OCD'] = df['cfq_ment_ocd_2']
     
     # Motor disorder - combine diag_motor (2 = confirmed) and cfq_ment_ts_2
-    df['motor_disorder'] = df['diag_motor'].map({2: 1}).fillna(df['cfq_ment_ts_2']).fillna(0)
+    df['motor_disorder'] = df['diag_motor'].map({2: 1}).fillna(df['cfq_ment_ts_2'])
     
     # Anxiety - combine ghf_anxiety and cfq_ment_ad_2
     df['anxiety'] = df['ghf_anxiety'].fillna(df['cfq_ment_ad_2'])
     
-    # Neurological conditions (convert to binary: 1 if 'Yes' (1), 0 otherwise)
-    # Map: '1'=Yes, all others=0
-    df['neurological_conditions'] = df['ghf_neuro'].str.strip().replace('', np.nan).map({'1': 1}).fillna(0).astype('Int64')
+    # Neurological conditions (convert to binary: 1 if 'Yes' (1), NaN otherwise)
+    # Map: '1'=Yes, all others=NaN
+    df['neurological_conditions'] = df['ghf_neuro'].map({1: 1}).astype('Int64')
     
     # Genetic disorder (2 = confirmed)
-    # Map: '2'=Yes, all others=0
-    df['genetic_disorder'] = df['diag_gene'].str.strip().replace('', np.nan).map({'2': 1}).fillna(0).astype('Int64')
-    
+    # Map: 2=Yes, all others=NaN
+    df['genetic_disorder'] = df['diag_gene'].map({2: 1}).astype('Int64')
+
     # Other conditions - combine all remaining diagnosis columns
     other_columns = [
         # Columns for "other" diagnosis, based on the image and context
