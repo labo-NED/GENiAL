@@ -113,6 +113,107 @@ def clean_variables(input_csv, output_csv):
             1: 'F',
             2: 'M'
         }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    
+    # --------------------
+    # SNV Single Gene Test
+    df = df.rename(columns={'gt_snv_single_gene_test': 'single_gene_test'})
+    if 'single_gene_test' in df.columns:
+        df['single_gene_test'] = pd.to_numeric(df['single_gene_test'], errors='coerce')
+        df['single_gene_test'] = df['single_gene_test'].map({
+            1: 'yes',
+            0: 'no'
+        }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    # Fragile X
+    df = df.rename(columns={'gt_snv_fxs': 'fragile_x'})
+    if 'fragile_x' in df.columns:
+        df['fragile_x'] = pd.to_numeric(df['fragile_x'], errors='coerce')
+        df['fragile_x'] = df['fragile_x'].map({
+            0: 'normal'
+        }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    # SMN1
+    df = df.rename(columns={'gt_snv_smn1': 'smn1'})
+    if 'smn1' in df.columns:
+        df['smn1'] = pd.to_numeric(df['smn1'], errors='coerce')
+        df['smn1'] = df['smn1'].map({
+            0: 'normal'
+        }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    # Panel Testing
+    df = df.rename(columns={'gt_snv_panel': 'panel_testing'})
+    if 'panel_testing' in df.columns:
+        df['panel_testing'] = pd.to_numeric(df['panel_testing'], errors='coerce')
+        df['panel_testing'] = df['panel_testing'].map({
+            1: 'yes',
+            0: 'no'
+        }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    # Panel Name (text - no mapping needed)
+    df = df.rename(columns={'gt_snv_panel_name': 'panel_name'})
+    
+    # --------------------
+    # Gene Name (text - no mapping needed)
+    df = df.rename(columns={'gt_snv_gene_name': 'gene_name'})
+    
+    # --------------------
+    # OMIM Code (text - no mapping needed)
+    df = df.rename(columns={'gt_snv_omim': 'omim_code'})
+    
+    # --------------------
+    # Drop protein column
+    df = df.drop(columns=['gt_snv_protein'], errors='ignore')
+    
+    # --------------------
+    # Mutation Type
+    df = df.rename(columns={'gt_snv_mut': 'mutation_type'})
+    if 'mutation_type' in df.columns:
+        df['mutation_type'] = pd.to_numeric(df['mutation_type'], errors='coerce')
+        df['mutation_type'] = df['mutation_type'].map({
+            4: 'splicing',
+            3: 'frameshift',
+            2: 'nonsense',
+            1: 'misense'
+        }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    # Zygosity
+    df = df.rename(columns={'gt_snv_zygo': 'zygosity'})
+    if 'zygosity' in df.columns:
+        df['zygosity'] = pd.to_numeric(df['zygosity'], errors='coerce')
+        df['zygosity'] = df['zygosity'].map({
+            1: 'heterozygous',
+            3: 'hemizygous',
+            4: 'mosaic'
+        }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    # Inheritance
+    df = df.rename(columns={'gt_snv_inherit': 'inheritance'})
+    if 'inheritance' in df.columns:
+        df['inheritance'] = pd.to_numeric(df['inheritance'], errors='coerce')
+        df['inheritance'] = df['inheritance'].map({
+            1: 'de_novo',
+            2: "mother's inheritance",
+            3: "father's inheritance",
+            4: 'unknown',
+            5: 'mosaic'
+        }, na_action='ignore').fillna('').astype(str)
+    
+    # --------------------
+    # SNV Complete
+    df = df.rename(columns={'general_health_form_genetic_testing_snv_complete': 'snv_complete'})
+    if 'snv_complete' in df.columns:
+        df['snv_complete'] = pd.to_numeric(df['snv_complete'], errors='coerce')
+        df['snv_complete'] = df['snv_complete'].map({
+            2: 'yes'
+        }, na_action='ignore').fillna('').astype(str)
 
     # Save the updated DataFrame to CSV
     df.to_csv(output_csv, index=False)

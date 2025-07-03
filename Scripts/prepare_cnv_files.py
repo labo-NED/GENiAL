@@ -4,7 +4,7 @@ def prepare_cnv_inputs(clean_db_csv, hg19_input, hg38_input):
     # CNV data - separated into hg19, AND hg38
     # These will be used to input into the CNV prediction tool
     df = pd.read_csv(clean_db_csv)
-    df['hg_version'].astype(str)
+    df['hg_version'] = df['hg_version'].astype(str)
     
     selected_columns = ['record_id','sex','CHR','START','STOP','TYPE']
     df_38 = df[df['hg_version'] == 'Hg38'][selected_columns]
@@ -19,12 +19,14 @@ def prepare_cnv_inputs(clean_db_csv, hg19_input, hg38_input):
         if col in df_38.columns:
             # Convert to numeric, then to int (to ensure no decimals)
             df_38[col] = pd.to_numeric(df_38[col], errors='coerce')
-            df_38[col] = df_38[col].astype(int)
+            # Fill NaN values with 0 or drop rows with NaN values
+            df_38[col] = df_38[col].fillna(0).astype(int)
             
         if col in df_19.columns:
             # Convert to numeric, then to int (to ensure no decimals)
             df_19[col] = pd.to_numeric(df_19[col], errors='coerce')
-            df_19[col] = df_19[col].astype(int)
+            # Fill NaN values with 0 or drop rows with NaN values
+            df_19[col] = df_19[col].fillna(0).astype(int)
     
     # Remove rows where TYPE is 'TRI'
     df_38 = df_38[df_38['TYPE'] != 'TRI']
