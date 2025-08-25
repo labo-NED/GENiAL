@@ -17,15 +17,15 @@ import seaborn as sns
 # 1. Load and preprocess
 # -------------------------
 behavioral_vars = [
-    # 'IQ',
+    'IQ',
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
-    'ASEBA_internalizing_problems_tscore',
-    'ASEBA_externalizing_problems_tscore',
-    'ASEBA_aggressive_behavior_tscore',
+    # 'ASEBA_internalizing_problems_tscore',
+    # 'ASEBA_externalizing_problems_tscore',
+    # 'ASEBA_aggressive_behavior_tscore',
     'ASEBA_attention_problems_tscore',
-    'ASEBA_anxious_depressed_tscore',
+    # 'ASEBA_anxious_depressed_tscore',
     'SCQ_score' # Social Communication Questionnaire
 ]
 
@@ -53,24 +53,47 @@ print(f"Percentage missing: {np.isnan(X).sum() / X.size * 100:.1f}%")
 # -------------------------
 
 # Calculate Gower distance matrix
-print("\nCalculating Gower distance matrix...")
-# Note: We'll use a simplified approach since scipy doesn't have built-in Gower
-# For now, we'll use a robust distance metric that handles missing values
+print("\nCalculating distance matrix with missing value handling...")
 
-# Use pairwise complete observations for distance calculation
-from sklearn.metrics.pairwise import nan_euclidean_distances
+# Custom function to calculate distances with missing value handling
+def pairwise_distance_with_nan(X):
+    n = X.shape[0]
+    distances = []
+    
+    for i in range(n):
+        for j in range(i+1, n):
+            # Get non-missing values for both participants
+            mask_i = ~np.isnan(X[i])
+            mask_j = ~np.isnan(X[j])
+            common_mask = mask_i & mask_j
+            
+            if np.sum(common_mask) > 0:  # If they have common non-missing values
+                # Calculate Euclidean distance only on common non-missing values
+                diff = X[i][common_mask] - X[j][common_mask]
+                distance = np.sqrt(np.sum(diff**2))
+                # Normalize by number of common dimensions
+                distance = distance / np.sqrt(np.sum(common_mask))
+            else:
+                # If no common values, use maximum distance
+                distance = np.sqrt(X.shape[1])
+            
+            distances.append(distance)
+    
+    return np.array(distances)
 
-# Calculate distance matrix using nan_euclidean (handles missing values)
-print("Computing distance matrix with missing value handling...")
-distance_matrix = nan_euclidean_distances(X, X)
+# Calculate distance matrix
+distance_condensed = pairwise_distance_with_nan(X)
 
 # Hierarchical clustering
 print("Performing hierarchical clustering...")
-linkage_matrix = linkage(squareform(distance_matrix), method='ward')
+linkage_matrix = linkage(distance_condensed, method='ward')
 
 # Test different numbers of clusters
 sil_scores = []
 K_range = range(2, 11)  # Test 2-10 clusters
+
+# Convert condensed distance matrix to full matrix for silhouette calculation
+distance_matrix = squareform(distance_condensed)
 
 for k in K_range:
     # Get cluster labels
