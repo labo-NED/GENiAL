@@ -19,12 +19,11 @@ df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/Q1KDat
 # 1. Load and preprocess
 # -------------------------
 behavioral_vars = [
-    'IQ',
+    # 'IQ',
     'SRS_social_cognition_tscore', # Social Cognition
     'SRS_social_communication_tscore', # Social Communication
     'SRS_restrictive_repetitive_tscore', # Restrictive/repetitive behaviors
     'attention_deficit_hyperactivity_tscore' # Attention problems
-    # 'SCQ_score' # Social Communication Questionnaire
 ]
 
 # -------------------------
@@ -45,7 +44,6 @@ print(f"After filtering for age 5-18: {len(df)} participants")
 df.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/filtered_after_age.csv", index=False)
 print("Saved filtered dataframe after age filtering to 'filtered_after_age.csv'")
 
-
 # Ensure participants have at least one diagnosis (at least one 1 in any diagnosis column)
 diagnosis_cols = ['ASD', 'ASD_behavior', 'ADHD'] # 'OCD', 'motor_disorder','anxiety', 'neurological_conditions', 'genetic_disorder', 'other'
 df = df[df[diagnosis_cols].sum(axis=1) >= 1]
@@ -55,8 +53,8 @@ print("After filtering for at least one diagnosis (sum of diagnosis columns >= 1
 # 3. Handle missing values based on configuration
 # ------------------------------------------------------------
 if USE_MEDIAN_IMPUTATION:
-    # Use median imputation if participant has at most 2/6 missing, otherwise drop
-    max_missing_allowed = 2
+    # Use median imputation if participant has at most 1/4 missing, otherwise drop
+    max_missing_allowed = 1
     missing_counts = df[behavioral_vars].isnull().sum(axis=1)
     eligible_for_imputation = missing_counts <= max_missing_allowed
 
@@ -76,9 +74,25 @@ if USE_MEDIAN_IMPUTATION:
     
 else:
     print(f"\nUsing COMPLETE CASES ONLY (dropping participants with missing data)")
+    
     # Use only complete cases
     df_processed = df[behavioral_vars].dropna()
+    
+    # Print IDs of participants that were dropped due to missing data
+    dropped_participants = df.index.difference(df_processed.index)
+    if len(dropped_participants) > 0:
+        print("\nParticipants dropped due to missing data (complete case analysis):")
+        print(df.loc[dropped_participants, 'participant_id'].tolist())
+    else:
+        print("\nNo participants were dropped due to missing data (complete case analysis).")
+    
     print(f"Using {len(df_processed)} participants with complete data")
+
+# Save the dataframe with only full data participants (complete cases) to CSV
+df_complete_cases = df[behavioral_vars].dropna()
+df_complete_cases_full = df.loc[df_complete_cases.index]
+df_complete_cases_full.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/complete_cases_only.csv", index=False)
+print("Saved dataframe with only full data participants (complete cases) to 'complete_cases_only.csv'")
 
 # ----------------------------------
 # 4. Quick check on sex distribution
@@ -232,7 +246,21 @@ for diag_col in diagnosis_cols:
                 percent = 100 * count / total if total > 0 else 0
                 print(f"    {diag_value}: {count} ({percent:.1f}%)")
 
-
+# Analyze IQ distribution per cluster
+if 'IQ' in df.columns:
+    # Add IQ column to df_processed_with_clusters if not already present
+    if 'IQ' not in df_processed_with_clusters.columns:
+        iq_values = df.loc[df_processed_with_clusters.index, 'IQ']
+        df_processed_with_clusters['IQ'] = iq_values
+    print("\nIQ distribution per cluster:")
+    for cl in sorted(df_processed_with_clusters['cluster'].unique()):
+        cluster_iq = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]['IQ'].dropna()
+        if len(cluster_iq) > 0:
+            print(f"  Cluster {cl}: n={len(cluster_iq)}, mean={cluster_iq.mean():.2f}, std={cluster_iq.std():.2f}, min={cluster_iq.min():.2f}, max={cluster_iq.max():.2f}")
+        else:
+            print(f"  Cluster {cl}: No IQ data available.")
+else:
+    print("No 'IQ' column found in the original dataframe for IQ distribution analysis.")
 
 # -------------------------
 # 10. VISUALIZATIONS
@@ -258,7 +286,7 @@ plt.ylabel('Variables')
 plt.xlabel('Cluster')
 
 # Box plots for key variables
-key_vars = ['SRS_social_communication_tscore', 'SCQ_score']
+key_vars = ['SRS_social_communication_tscore', 'attention_deficit_hyperactivity_tscore']
 for i, var in enumerate(key_vars):
     plt.subplot(2, 2, 3 + i)
     df_processed_with_clusters.boxplot(column=var, by='cluster', ax=plt.gca())
