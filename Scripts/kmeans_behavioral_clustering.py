@@ -1,4 +1,4 @@
-from numpy._core.numeric import True_
+from numpy._core.numeric import False_, True_
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -11,7 +11,7 @@ import seaborn as sns
 # -------------------------
 # CONFIGURATION - Change this to switch between methods
 # -------------------------
-USE_MEDIAN_IMPUTATION = True  # Set to True for median imputation, False for dropping NAs
+USE_MEDIAN_IMPUTATION = False  # Set to True for median imputation, False for dropping NAs
 df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/Q1KDatabase-ECNEEGIQGENCHUSJ_DATA_for_cluster_analysis.csv")   # Replace with your dataset
 
 
@@ -23,8 +23,8 @@ behavioral_vars = [
     'SRS_social_cognition_tscore', # Social Cognition
     'SRS_social_communication_tscore', # Social Communication
     'SRS_restrictive_repetitive_tscore', # Restrictive/repetitive behaviors
-    'ASEBA_attention_problems_tscore', # Attention problems
-    'SCQ_score' # Social Communication Questionnaire
+    'attention_deficit_hyperactivity_tscore' # Attention problems
+    # 'SCQ_score' # Social Communication Questionnaire
 ]
 
 # -------------------------
@@ -32,17 +32,22 @@ behavioral_vars = [
 # -------------------------
 print("Original dataset size:", len(df))
 
-# # Filter for probands and siblings only (participants ending with _P or _S)
+# Filter for probands and siblings only (participants ending with _P or _S)
 # df = df[df['participant_id'].str.endswith('_P', na=False) | df['participant_id'].str.contains(r'_S\d+$', na=False)]
 # print("After filtering for probands and siblings:", len(df))
 
-# Keep only participants aged 0 to 21
+# Keep only participants aged 5 to 18
 age_col = 'eeg_age_years_testdate'
-df = df[(df[age_col] >= 6) & (df[age_col] <= 18)]
-print(f"After filtering for age 6-18: {len(df)} participants")
+df = df[(df[age_col] >= 5) & (df[age_col] <= 18)]
+print(f"After filtering for age 5-18: {len(df)} participants")
+
+# Save the dataframe after age filtering
+df.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/filtered_after_age.csv", index=False)
+print("Saved filtered dataframe after age filtering to 'filtered_after_age.csv'")
+
 
 # Ensure participants have at least one diagnosis (at least one 1 in any diagnosis column)
-diagnosis_cols = ['ASD', 'ASD_behavior', 'ADHD'] # 'ASD_behavior', 'OCD', 'motor_disorder','anxiety', 'neurological_conditions', 'genetic_disorder', 'other'
+diagnosis_cols = ['ASD', 'ASD_behavior', 'ADHD'] # 'OCD', 'motor_disorder','anxiety', 'neurological_conditions', 'genetic_disorder', 'other'
 df = df[df[diagnosis_cols].sum(axis=1) >= 1]
 print("After filtering for at least one diagnosis (sum of diagnosis columns >= 1):", len(df))
 
