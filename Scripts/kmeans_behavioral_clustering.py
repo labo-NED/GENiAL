@@ -12,9 +12,12 @@ import seaborn as sns
 # CONFIGURATION - Change this to switch between methods
 # -------------------------
 USE_MEDIAN_IMPUTATION = False  # Set to True for median imputation, False for dropping NAs
-df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/Q1KDatabase-ECNEEGIQGENCHUSJ_DATA_for_cluster_analysis.csv")   # Replace with your dataset
-# Load additional info from the cleaned/flattened file
-df_complete = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/Q1KDatabase-ECNEEGIQGENCHUSJ_DATA_flattened_cleaned_cnv_renamedcols_IQ_groups_demog_behavioral_scores.csv")
+# df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/Q1KDatabase-ECNEEGIQGENCHUSJ_DATA_for_cluster_analysis.csv")   # Replace with your dataset
+# # Load additional info from the cleaned/flattened file
+# df_complete = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/Q1KDatabase-ECNEEGIQGENCHUSJ_DATA_flattened_cleaned_cnv_renamedcols_IQ_groups_demog_behavioral_scores.csv")
+
+df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/Combined_Q1K_BC_DATA.csv")
+
 
 
 # -------------------------
@@ -46,10 +49,10 @@ print(f"After filtering for age 5-18: {len(df)} participants")
 df.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/filtered_after_age.csv", index=False)
 print("Saved filtered dataframe after age filtering to 'filtered_after_age.csv'")
 
-# Ensure participants have at least one diagnosis (at least one 1 in any diagnosis column)
-diagnosis_cols = ['ASD', 'ASD_behavior', 'ADHD'] # 'OCD', 'motor_disorder','anxiety', 'neurological_conditions', 'genetic_disorder', 'other'
-df = df[df[diagnosis_cols].sum(axis=1) >= 1]
-print("After filtering for at least one diagnosis (sum of diagnosis columns >= 1):", len(df))
+# # Ensure participants have at least one diagnosis (at least one 1 in any diagnosis column)
+# diagnosis_cols = ['ASD', 'ASD_behavior', 'ADHD'] # 'OCD', 'motor_disorder','anxiety', 'neurological_conditions', 'genetic_disorder', 'other'
+# df = df[df[diagnosis_cols].sum(axis=1) >= 1]
+# print("After filtering for at least one diagnosis (sum of diagnosis columns >= 1):", len(df))
 
 # ------------------------------------------------------------
 # 3. Handle missing values based on configuration
@@ -312,158 +315,158 @@ for col in demographic_cols:
     else:
         print(f"No '{col}' column found in the original dataframe for analysis.")
 
-# Analyze if have "hg_version" or "single_gene_test = yes"
+# # Analyze if have "hg_version" or "single_gene_test = yes"
 
-# Use columns from df_complete, and match participants based on participant_id
+# # Use columns from df_complete, and match participants based on participant_id
 
-# Check if either 'hg_version' or 'single_gene_test' columns exist in df_complete
-has_hg_version = 'hg_version' in df_complete.columns
-has_single_gene_test = 'single_gene_test' in df_complete.columns
+# # Check if either 'hg_version' or 'single_gene_test' columns exist in df_complete
+# has_hg_version = 'hg_version' in df_complete.columns
+# has_single_gene_test = 'single_gene_test' in df_complete.columns
 
-if has_hg_version or has_single_gene_test:
-    print("\nAnalysis of CNV and single gene testing per cluster (using df_complete, matched by participant_id):")
+# if has_hg_version or has_single_gene_test:
+#     print("\nAnalysis of CNV and single gene testing per cluster (using df_complete, matched by participant_id):")
 
-    # Ensure participant_id is present in both dataframes
-    if 'participant_id' in df_processed_with_clusters.columns and 'participant_id' in df_complete.columns:
-        # Set index for fast lookup
-        df_complete_indexed = df_complete.set_index('participant_id', drop=False)
+#     # Ensure participant_id is present in both dataframes
+#     if 'participant_id' in df_processed_with_clusters.columns and 'participant_id' in df_complete.columns:
+#         # Set index for fast lookup
+#         df_complete_indexed = df_complete.set_index('participant_id', drop=False)
 
-        if has_hg_version:
-            # Add 'hg_version' to df_processed_with_clusters if not already present
-            if 'hg_version' not in df_processed_with_clusters.columns:
-                hg_values = df_processed_with_clusters['participant_id'].map(
-                    df_complete_indexed['hg_version']
-                )
-                df_processed_with_clusters['hg_version'] = hg_values
+#         if has_hg_version:
+#             # Add 'hg_version' to df_processed_with_clusters if not already present
+#             if 'hg_version' not in df_processed_with_clusters.columns:
+#                 hg_values = df_processed_with_clusters['participant_id'].map(
+#                     df_complete_indexed['hg_version']
+#                 )
+#                 df_processed_with_clusters['hg_version'] = hg_values
 
-            print("\nCNV testing (hg_version not empty) per cluster:")
-            for cl in sorted(df_processed_with_clusters['cluster'].unique()):
-                cluster_hg = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]['hg_version']
-                total = cluster_hg.notnull().sum()
-                cnv_tested = cluster_hg.notnull() & (cluster_hg.astype(str).str.strip() != "")
-                cnv_count = cnv_tested.sum()
-                percent = 100 * cnv_count / total if total > 0 else 0
-                print(f"  Cluster {cl}: {cnv_count} participants had CNV testing ({percent:.1f}%) out of {total} with data")
-                if total == 0:
-                    print("    No 'hg_version' data available.")
+#             print("\nCNV testing (hg_version not empty) per cluster:")
+#             for cl in sorted(df_processed_with_clusters['cluster'].unique()):
+#                 cluster_hg = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]['hg_version']
+#                 total = cluster_hg.notnull().sum()
+#                 cnv_tested = cluster_hg.notnull() & (cluster_hg.astype(str).str.strip() != "")
+#                 cnv_count = cnv_tested.sum()
+#                 percent = 100 * cnv_count / total if total > 0 else 0
+#                 print(f"  Cluster {cl}: {cnv_count} participants had CNV testing ({percent:.1f}%) out of {total} with data")
+#                 if total == 0:
+#                     print("    No 'hg_version' data available.")
 
-        if has_single_gene_test:
-            # Add 'single_gene_test' to df_processed_with_clusters if not already present
-            if 'single_gene_test' not in df_processed_with_clusters.columns:
-                sgt_values = df_processed_with_clusters['participant_id'].map(
-                    df_complete_indexed['single_gene_test']
-                )
-                df_processed_with_clusters['single_gene_test'] = sgt_values
+#         if has_single_gene_test:
+#             # Add 'single_gene_test' to df_processed_with_clusters if not already present
+#             if 'single_gene_test' not in df_processed_with_clusters.columns:
+#                 sgt_values = df_processed_with_clusters['participant_id'].map(
+#                     df_complete_indexed['single_gene_test']
+#                 )
+#                 df_processed_with_clusters['single_gene_test'] = sgt_values
 
-            print("\nSingle gene testing ('single_gene_test = yes') per cluster:")
-            for cl in sorted(df_processed_with_clusters['cluster'].unique()):
-                cluster_sgt = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]['single_gene_test'].dropna()
-                yes_count = (cluster_sgt.astype(str).str.lower().str.strip() == 'yes').sum()
-                total = cluster_sgt.notnull().sum()
-                percent = 100 * yes_count / total if total > 0 else 0
-                print(f"  Cluster {cl}: {yes_count} participants had single gene testing ('yes') ({percent:.1f}%) out of {total} with data")
-                if total == 0:
-                    print("    No 'single_gene_test' data available.")
-    else:
-        print("participant_id column missing in one of the dataframes; cannot match participants for CNV/single gene test analysis.")
-else:
-    print("\nNo 'hg_version' or 'single_gene_test' columns found in df_complete for analysis.")
+#             print("\nSingle gene testing ('single_gene_test = yes') per cluster:")
+#             for cl in sorted(df_processed_with_clusters['cluster'].unique()):
+#                 cluster_sgt = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]['single_gene_test'].dropna()
+#                 yes_count = (cluster_sgt.astype(str).str.lower().str.strip() == 'yes').sum()
+#                 total = cluster_sgt.notnull().sum()
+#                 percent = 100 * yes_count / total if total > 0 else 0
+#                 print(f"  Cluster {cl}: {yes_count} participants had single gene testing ('yes') ({percent:.1f}%) out of {total} with data")
+#                 if total == 0:
+#                     print("    No 'single_gene_test' data available.")
+#     else:
+#         print("participant_id column missing in one of the dataframes; cannot match participants for CNV/single gene test analysis.")
+# else:
+#     print("\nNo 'hg_version' or 'single_gene_test' columns found in df_complete for analysis.")
 
-# Analyze the "Genes" column for overlap per cluster using df_complete, matched by participant_id
+# # Analyze the "Genes" column for overlap per cluster using df_complete, matched by participant_id
 
-if 'Genes' in df_complete.columns:
-    print("\nAnalysis of gene overlap per cluster (using df_complete, matched by participant_id):")
+# if 'Genes' in df_complete.columns:
+#     print("\nAnalysis of gene overlap per cluster (using df_complete, matched by participant_id):")
 
-    import matplotlib.pyplot as plt
+#     import matplotlib.pyplot as plt
 
-    if 'participant_id' in df_processed_with_clusters.columns and 'participant_id' in df_complete.columns:
-        # Set index for fast lookup
-        df_complete_indexed = df_complete.set_index('participant_id', drop=False)
+#     if 'participant_id' in df_processed_with_clusters.columns and 'participant_id' in df_complete.columns:
+#         # Set index for fast lookup
+#         df_complete_indexed = df_complete.set_index('participant_id', drop=False)
 
-        # Add 'Genes' to df_processed_with_clusters if not already present
-        if 'Genes' not in df_processed_with_clusters.columns:
-            genes_values = df_processed_with_clusters['participant_id'].map(
-                df_complete_indexed['Genes']
-            )
-            df_processed_with_clusters['Genes'] = genes_values
+#         # Add 'Genes' to df_processed_with_clusters if not already present
+#         if 'Genes' not in df_processed_with_clusters.columns:
+#             genes_values = df_processed_with_clusters['participant_id'].map(
+#                 df_complete_indexed['Genes']
+#             )
+#             df_processed_with_clusters['Genes'] = genes_values
 
-        # Prepare a dictionary to store sets of genes per cluster
-        cluster_genes = {}
-        for cl in sorted(df_processed_with_clusters['cluster'].unique()):
-            # Get the 'Genes' column for this cluster, drop missing
-            genes_series = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]['Genes'].dropna()
-            genes_set = set()
-            for genes_str in genes_series:
-                # Split by comma, semicolon, or whitespace, strip spaces
-                if isinstance(genes_str, str):
-                    for part in genes_str.replace(';', ',').split(','):
-                        gene = part.strip()
-                        if gene:
-                            genes_set.add(gene)
-            cluster_genes[cl] = genes_set
-            print(f"  Cluster {cl}: {len(genes_set)} unique genes")
+#         # Prepare a dictionary to store sets of genes per cluster
+#         cluster_genes = {}
+#         for cl in sorted(df_processed_with_clusters['cluster'].unique()):
+#             # Get the 'Genes' column for this cluster, drop missing
+#             genes_series = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]['Genes'].dropna()
+#             genes_set = set()
+#             for genes_str in genes_series:
+#                 # Split by comma, semicolon, or whitespace, strip spaces
+#                 if isinstance(genes_str, str):
+#                     for part in genes_str.replace(';', ',').split(','):
+#                         gene = part.strip()
+#                         if gene:
+#                             genes_set.add(gene)
+#             cluster_genes[cl] = genes_set
+#             print(f"  Cluster {cl}: {len(genes_set)} unique genes")
 
-        # For each cluster, find genes that are shared between at least two participants in that cluster
-        print("\nGenes shared between participants within each cluster:")
-        from collections import Counter
-        import pandas as pd
+#         # For each cluster, find genes that are shared between at least two participants in that cluster
+#         print("\nGenes shared between participants within each cluster:")
+#         from collections import Counter
+#         import pandas as pd
 
-        clusters = sorted(cluster_genes.keys())
-        # For table/graph: collect (cluster, gene, count) for genes with count >= 2
-        shared_genes_records = []
+#         clusters = sorted(cluster_genes.keys())
+#         # For table/graph: collect (cluster, gene, count) for genes with count >= 2
+#         shared_genes_records = []
 
-        for cl in clusters:
-            # Get all genes for each participant in this cluster
-            cluster_df = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]
-            # Build a list of sets, each set is the genes for one participant
-            participant_genes = []
-            for genes_str in cluster_df['Genes'].dropna():
-                if isinstance(genes_str, str):
-                    genes = set(g.strip() for g in genes_str.replace(';', ',').split(',') if g.strip())
-                    if genes:
-                        participant_genes.append(genes)
-            # Count gene occurrences across participants
-            gene_counter = Counter()
-            for genes in participant_genes:
-                gene_counter.update(genes)
-            # Find genes that are present in at least two participants in this cluster
-            shared_genes = [(gene, count) for gene, count in gene_counter.items() if count >= 2]
-            print(f"  Cluster {cl}: {len(shared_genes)} genes shared by at least two participants")
-            if shared_genes:
-                print(f"    Shared genes: {[gene for gene, count in shared_genes]}")
-                for gene, count in shared_genes:
-                    shared_genes_records.append({'Cluster': cl, 'Gene': gene, 'Count': count})
-            else:
-                print("    No genes shared by more than one participant in this cluster.")
+#         for cl in clusters:
+#             # Get all genes for each participant in this cluster
+#             cluster_df = df_processed_with_clusters[df_processed_with_clusters['cluster'] == cl]
+#             # Build a list of sets, each set is the genes for one participant
+#             participant_genes = []
+#             for genes_str in cluster_df['Genes'].dropna():
+#                 if isinstance(genes_str, str):
+#                     genes = set(g.strip() for g in genes_str.replace(';', ',').split(',') if g.strip())
+#                     if genes:
+#                         participant_genes.append(genes)
+#             # Count gene occurrences across participants
+#             gene_counter = Counter()
+#             for genes in participant_genes:
+#                 gene_counter.update(genes)
+#             # Find genes that are present in at least two participants in this cluster
+#             shared_genes = [(gene, count) for gene, count in gene_counter.items() if count >= 2]
+#             print(f"  Cluster {cl}: {len(shared_genes)} genes shared by at least two participants")
+#             if shared_genes:
+#                 print(f"    Shared genes: {[gene for gene, count in shared_genes]}")
+#                 for gene, count in shared_genes:
+#                     shared_genes_records.append({'Cluster': cl, 'Gene': gene, 'Count': count})
+#             else:
+#                 print("    No genes shared by more than one participant in this cluster.")
 
-        # Create a DataFrame for shared genes (count >= 2)
-        if shared_genes_records:
-            shared_genes_df = pd.DataFrame(shared_genes_records)
-            print("\nTable of genes shared by at least two participants (per cluster):")
-            print(shared_genes_df.sort_values(['Cluster', 'Count', 'Gene'], ascending=[True, False, True]).to_string(index=False))
+#         # Create a DataFrame for shared genes (count >= 2)
+#         if shared_genes_records:
+#             shared_genes_df = pd.DataFrame(shared_genes_records)
+#             print("\nTable of genes shared by at least two participants (per cluster):")
+#             print(shared_genes_df.sort_values(['Cluster', 'Count', 'Gene'], ascending=[True, False, True]).to_string(index=False))
 
-            # Only show genes with count >= 3 in the plot (as per instruction: "those over 2 with same genes only")
-            plot_df = shared_genes_df[shared_genes_df['Count'] > 2]
-            if not plot_df.empty:
-                plt.figure(figsize=(12, 6))
-                # Sort for better visualization
-                plot_df = plot_df.sort_values(['Count', 'Gene'], ascending=[False, True])
-                # Create a bar plot: x = gene (with cluster), y = count
-                plot_df['Gene (Cluster)'] = plot_df['Gene'] + " (C" + plot_df['Cluster'].astype(str) + ")"
-                plt.bar(plot_df['Gene (Cluster)'], plot_df['Count'], color='skyblue')
-                plt.xticks(rotation=90)
-                plt.ylabel('Number of Participants')
-                plt.title('Genes shared by more than 2 participants (per cluster)')
-                plt.tight_layout()
-                plt.show()
-            else:
-                print("\nNo genes are shared by more than 2 participants in any cluster (no bar plot shown).")
-        else:
-            print("\nNo genes are shared by at least two participants in any cluster (no table or plot to show).")
-    else:
-        print("participant_id column missing in one of the dataframes; cannot match participants for gene overlap analysis.")
-else:
-    print("\nNo 'Genes' column found in df_complete for analysis.")
+#             # Only show genes with count >= 3 in the plot (as per instruction: "those over 2 with same genes only")
+#             plot_df = shared_genes_df[shared_genes_df['Count'] > 2]
+#             if not plot_df.empty:
+#                 plt.figure(figsize=(12, 6))
+#                 # Sort for better visualization
+#                 plot_df = plot_df.sort_values(['Count', 'Gene'], ascending=[False, True])
+#                 # Create a bar plot: x = gene (with cluster), y = count
+#                 plot_df['Gene (Cluster)'] = plot_df['Gene'] + " (C" + plot_df['Cluster'].astype(str) + ")"
+#                 plt.bar(plot_df['Gene (Cluster)'], plot_df['Count'], color='skyblue')
+#                 plt.xticks(rotation=90)
+#                 plt.ylabel('Number of Participants')
+#                 plt.title('Genes shared by more than 2 participants (per cluster)')
+#                 plt.tight_layout()
+#                 plt.show()
+#             else:
+#                 print("\nNo genes are shared by more than 2 participants in any cluster (no bar plot shown).")
+#         else:
+#             print("\nNo genes are shared by at least two participants in any cluster (no table or plot to show).")
+#     else:
+#         print("participant_id column missing in one of the dataframes; cannot match participants for gene overlap analysis.")
+# else:
+#     print("\nNo 'Genes' column found in df_complete for analysis.")
 
 
 # -------------------------
