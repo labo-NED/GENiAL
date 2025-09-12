@@ -162,6 +162,11 @@ cluster_labels = kmeans_final.fit_predict(X)
 df_processed_with_clusters = df_processed.copy()
 df_processed_with_clusters['cluster'] = cluster_labels
 
+# Add cluster assignment column to the original dataframe
+df_with_clusters = df.copy()
+df_with_clusters['cluster'] = np.nan  # Initialize with NaN
+df_with_clusters.loc[df_processed.index, 'cluster'] = cluster_labels
+
 # Show cluster sizes
 unique, counts = np.unique(cluster_labels, return_counts=True)
 print(f"\nNumber of participants per cluster:")
@@ -336,9 +341,9 @@ plt.ylabel('Variables')
 plt.xlabel('Cluster')
 
 # Box plots for key variables
-key_vars = ['SRS_social_communication_tscore', 'attention_deficit_hyperactivity_tscore']
+key_vars = ['SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore', 'attention_deficit_hyperactivity_tscore']
 for i, var in enumerate(key_vars):
-    plt.subplot(2, 2, 3 + i)
+    plt.subplot(4, 4, 3 + i)
     df_processed_with_clusters.boxplot(column=var, by='cluster', ax=plt.gca())
     plt.title(f'{var} by Cluster')
     plt.suptitle('')  # Remove automatic suptitle
