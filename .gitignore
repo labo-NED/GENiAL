@@ -9,3 +9,4 @@
 # Ignore macOS metadata
 .DS_Store
 Scripts/__pycache__
+.Rproj.user
