@@ -38,8 +38,6 @@ print(df[behavioral_vars].isnull().sum())
 print(f"\nTotal rows: {len(df)}")
 print(f"Rows with complete data: {df[behavioral_vars].dropna().shape[0]}")
 
-
-
 # # Prepare data for Gower distance (keep missing values as NaN)
 # X = df[behavioral_vars].values
 # print(f"\nData shape: {X.shape}")
