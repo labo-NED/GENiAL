@@ -10,3 +10,9 @@
 .DS_Store
 Scripts/__pycache__
 .Rproj.user
+
+# Ignore R files
+/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/descriptives.txt
+/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/RAW_freq_output.txt
+/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/scatter_plots.pdf
+/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/histograms.pdf
