@@ -93,6 +93,9 @@ sink(NULL) # Disable active sink
 ### Recode sex to factor
 og_dataset_copy$sex <- factor(og_dataset_copy$sex)
 
+# Save
+write.csv(og_dataset_copy, file = "FINAL_DATABASE_USED_IN_R.csv", row.names = FALSE)
+
 ################### Basic Stats ########################
 
 # Check frequencies of categorical variables
