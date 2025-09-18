@@ -9,7 +9,7 @@ df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_
 
 # Keep only participants with ASD, ASD_behavior, or ADHD
 # Use parentheses to ensure correct operator precedence with bitwise OR
-df = df[(df['ASD'] == 1) | (df['ASD_behavior'] == 1) | (df['ADHD'] == 1)]
+df = df[(df['ASD'] == 1) | (df['ADHD'] == 1)]
 
 # Save database as new CSV
 df.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/ASD_ADHD_db.csv", index=False)

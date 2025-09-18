@@ -3,6 +3,7 @@ install.packages('readxl')
 install.packages("sjmisc")
 install.packages('jmv') # ANOVA
 install.packages("haven")
+install.packages("knitr")
 
 ########################## Activate packages #########################
 library(readxl)
@@ -376,13 +377,11 @@ diagnosis_labels <- function(row) {
   if (asd && adhd) {
     return("ASD + ADHD")
   } else if (asd) {
-    return("ASD only")
+    return("ASD")
   } else if (asd_behavior && adhd) {
-    return("ASD_behavior + ADHD")
-  } else if (asd_behavior) {
-    return("ASD_behavior only")
+    return("ADHD + ASD behavior")
   } else if (adhd) {
-    return("ADHD only")
+    return("ADHD")
   } else {
     return("No ASD/ADHD")
   }
@@ -390,18 +389,15 @@ diagnosis_labels <- function(row) {
 
 og_dataset_copy$diagnosis_group <- apply(og_dataset_copy[, c("ASD", "ASD_behavior", "ADHD")], 1, diagnosis_labels)
 
-# Set a fixed order for diagnosis groups for consistent coloring and labeling
-diagnosis_levels <- c("ADHD only", "ASD + ADHD", "ASD only", "ASD_behavior + ADHD", "ASD_behavior only", "No ASD/ADHD")
-og_dataset_copy$diagnosis_group <- factor(og_dataset_copy$diagnosis_group, levels = diagnosis_levels)
+# Do not enforce a fixed order for diagnosis groups
+og_dataset_copy$diagnosis_group <- factor(og_dataset_copy$diagnosis_group)
 
 # Custom color palette for diagnosis groups (more distinct colors)
 diagnosis_colors <- c(
-  "ASD only" = "#E64A19",              # deep orange
-  "ASD_behavior only" = "#1976D2",     # strong blue
-  "ADHD only" = "#43A047",             # green (unchanged, already distinct)
+  "ASD" = "#1976D2",              # deep blue
+  "ADHD" = "#E91E63",             # pink
   "ASD + ADHD" = "#8E24AA",            # purple
-  "ASD_behavior + ADHD" = "#FBC02D",   # gold
-  "No ASD/ADHD" = "#757575"            # dark gray
+  "ADHD + ASD behavior" = "#BA68C8"   # light purple
 )
 
 clusters <- levels(og_dataset_copy$cluster)
@@ -414,10 +410,9 @@ for (cl in clusters) {
     summarise(count = n(), .groups = "drop") %>%
     mutate(perc = count / sum(count) * 100)
 
-  # Ensure all diagnosis groups are present (even if count = 0)
+ # Ensure all diagnosis groups are present (even if count = 0)
   diag_counts <- diag_counts %>%
-    complete(diagnosis_group = diagnosis_levels, fill = list(count = 0, perc = 0))
-
+    complete(diagnosis_group = levels(og_dataset_copy$diagnosis_group), fill = list(count = 0, perc = 0))
   # Remove groups with count == 0 so they don't get plotted as tiny slivers
   diag_counts <- diag_counts %>% filter(count > 0)
 
@@ -444,7 +439,6 @@ for (cl in clusters) {
       hjust = ifelse(angle < -90, 1, 0),
       angle = ifelse(angle < -90, angle + 180, angle)
     )
-
   pie_chart <- ggplot(diag_counts, aes(x = "", y = count, fill = diagnosis_group)) +
     geom_col(width = 1, color = "white") +
     coord_polar(theta = "y", start = 0) +
@@ -475,3 +469,125 @@ for (cl in clusters) {
 
   print(pie_chart)
 }
+
+# Create a demographic summary table for each cluster
+library(dplyr)
+
+# Assuming your main data frame is called 'df' and has a column 'cluster'
+# Adjust the data frame name if needed
+
+demographic_summary <- df %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    male_n = sum(sex == "M", na.rm = TRUE),
+    male_perc = round(100 * mean(sex == "M", na.rm = TRUE), 1),
+    female_n = sum(sex == "F", na.rm = TRUE),
+    female_perc = round(100 * mean(sex == "F", na.rm = TRUE), 1),
+    age_mean = round(mean(age, na.rm = TRUE), 1),
+    age_sd = round(sd(age, na.rm = TRUE), 1)
+  )
+
+# Frequency tables for categorical variables by cluster
+sex_table <- df %>%
+  group_by(cluster, sex) %>%
+  summarise(n = n()) %>%
+  mutate(perc = round(100 * n / sum(n), 1)) %>%
+  arrange(cluster, desc(n))
+
+ethnicity_table <- df %>%
+  group_by(cluster, family_ethnicity_recoded) %>%
+  summarise(n = n()) %>%
+  mutate(perc = round(100 * n / sum(n), 1)) %>%
+  arrange(cluster, desc(n))
+
+education_table <- df %>%
+  group_by(cluster, highest_education_level_recoded) %>%
+  summarise(n = n()) %>%
+  mutate(perc = round(100 * n / sum(n), 1)) %>%
+  arrange(cluster, desc(n))
+
+# Save the tables in pretty format for inclusion in a scientific article (e.g., as markdown or LaTeX)
+library(knitr)
+
+# Save as markdown tables (plain text, easy to copy into manuscripts)
+writeLines(
+  kable(demographic_summary, caption = "Demographic summary by cluster", format = "markdown"),
+  "R_output/demographic_summary_by_cluster.txt"
+)
+
+writeLines(
+  kable(sex_table, caption = "Sex distribution by cluster", format = "markdown"),
+  "R_output/sex_distribution_by_cluster.txt"
+)
+
+writeLines(
+  kable(ethnicity_table, caption = "Family ethnicity distribution by cluster", format = "markdown"),
+  "R_output/family_ethnicity_distribution_by_cluster.txt"
+)
+
+writeLines(
+  kable(education_table, caption = "Highest education level distribution by cluster", format = "markdown"),
+  "R_output/highest_education_level_distribution_by_cluster.txt"
+)
+
+########################## Demographic Comparisons ##########################
+
+# Test if clusters are comparable demographically
+# This is important to ensure any differences in behavioral measures 
+# are not due to demographic confounds
+
+sink(file = "R_output/demographic_comparisons.txt")
+
+cat("DEMOGRAPHIC COMPARISONS BETWEEN CLUSTERS\n")
+cat("========================================\n\n")
+
+# 1. AGE COMPARISON (Independent samples t-test)
+cat("1. AGE COMPARISON\n")
+cat("-----------------\n")
+age_test <- t.test(age ~ cluster, data = df)
+print(age_test)
+cat("Effect size (Cohen's d):", abs(age_test$statistic) * sqrt(1/df$cluster[df$cluster == 0] %>% length() + 1/df$cluster[df$cluster == 1] %>% length()), "\n\n")
+
+# 2. IQ COMPARISON (Independent samples t-test)
+cat("2. IQ COMPARISON\n")
+cat("----------------\n")
+iq_test <- t.test(IQ ~ cluster, data = df)
+print(iq_test)
+cat("Effect size (Cohen's d):", abs(iq_test$statistic) * sqrt(1/df$cluster[df$cluster == 0] %>% length() + 1/df$cluster[df$cluster == 1] %>% length()), "\n\n")
+
+# 3. SEX COMPARISON (Chi-square test)
+cat("3. SEX COMPARISON\n")
+cat("-----------------\n")
+sex_table_test <- table(df$cluster, df$sex)
+sex_chi2 <- chisq.test(sex_table_test)
+print(sex_chi2)
+cat("Cramér's V (effect size):", sqrt(sex_chi2$statistic / (nrow(df) * (min(nrow(sex_table_test), ncol(sex_table_test)) - 1))), "\n\n")
+
+# 4. EDUCATION COMPARISON (Chi-square test)
+cat("4. EDUCATION LEVEL COMPARISON\n")
+cat("-----------------------------\n")
+education_table_test <- table(df$cluster, df$highest_education_level_recoded)
+education_chi2 <- chisq.test(education_table_test)
+print(education_chi2)
+cat("Cramér's V (effect size):", sqrt(education_chi2$statistic / (nrow(df) * (min(nrow(education_table_test), ncol(education_table_test)) - 1))), "\n\n")
+
+# 5. ETHNICITY COMPARISON (Chi-square test)
+cat("5. ETHNICITY COMPARISON\n")
+cat("----------------------\n")
+ethnicity_table_test <- table(df$cluster, df$family_ethnicity_recoded)
+ethnicity_chi2 <- chisq.test(ethnicity_table_test)
+print(ethnicity_chi2)
+cat("Cramér's V (effect size):", sqrt(ethnicity_chi2$statistic / (nrow(df) * (min(nrow(ethnicity_table_test), ncol(ethnicity_table_test)) - 1))), "\n\n")
+
+# Summary of results
+cat("SUMMARY\n")
+cat("=======\n")
+cat("Significant differences (p < 0.05) indicate potential demographic confounds.\n")
+cat("Non-significant differences suggest clusters are demographically comparable.\n")
+cat("Effect sizes help interpret practical significance:\n")
+cat("- Cohen's d: 0.2 = small, 0.5 = medium, 0.8 = large\n")
+cat("- Cramér's V: 0.1 = small, 0.3 = medium, 0.5 = large\n\n")
+
+sink()
+sink(NULL)

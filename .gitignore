@@ -13,6 +13,7 @@ Scripts/__pycache__
 
 # Ignore R files
 .Rhistory
+R_output/*
 descriptives.txt
 RAW_freq_output.txt
 scatter_plots.pdf
