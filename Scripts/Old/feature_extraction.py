@@ -35,11 +35,9 @@ def compute_mse(signal):
     return np.nan
 
 # === EXAMPLE COMMANDS ===
-# To run with 2s preprocessed Q1K data: `python Scripts/feature_extraction.py --hurst --fooof --bandpower --directory "/Volumes/NED_Backup3/Q1K_Preprocessed_2s_Happe/5 - processed"`
-# To run with 2s preprocessed BC data: `python Scripts/feature_extraction.py --hurst --fooof --bandpower --directory "/Volumes/NED_Backup3/BC_preprocessed/2s-preprocessed/5 - processed"`
+# To run with 2s preprocessed: python3 Scripts/feature_extraction.py --fooof --bandpower --directory "/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s"
+# To run with 5s preprocessed: python3 Scripts/feature_extraction.py --entropy --mse --directory "/Volumes/NED_Backup3/COMBINED_Q1K_BC_5s"
 
-# To run with 5s preprocessed Q1K data: `python Scripts/feature_extraction.py --entropy --mse --directory "/Volumes/NED_Backup3/Q1K_Preprocessed_5s_Happe/5 - processed"`
-# To run with 5s preprocessed BC data: `python Scripts/feature_extraction.py --entropy --mse --directory "/Volumes/NED_Backup3/BC_preprocessed/5s-preprocessed/5 - processed"`
 
 # === Argument Parsing ===
 parser = argparse.ArgumentParser(description='EEG Feature Extraction')
@@ -118,12 +116,9 @@ for sub, fname in enumerate(file_names):
             f, pxx1 = welch(signal, fs=Fs, window=window, nperseg=len(window), noverlap=noverlap, nfft=N)
             pxx_t.append(pxx1)
 
-            # --- FOOOF Spectral Decomposition ---
-            if args.fooof:
-                fooof_results = fooof_placeholder(f, pxx1, f_range, settings)
-                fooof_results_t[(sub, epoch, ch)] = fooof_results
-
-                # --- Absolute Band Power ---
+            # --- Band Power (Welch) ---
+            if args.bandpower:
+                # Define frequency bands
                 f1 = np.where((f >= 1) & (f <= 3.5))[0]     # Delta
                 f2 = np.where((f >= 4) & (f <= 7))[0]       # Theta
                 f3 = np.where((f >= 7.5) & (f <= 12.5))[0]  # Alpha
@@ -147,6 +142,11 @@ for sub, fname in enumerate(file_names):
                 rel_row = [PSD_row[band] / sum(PSD_row) for band in range(len(PSD_row)-1)]
                 relative_PSD.append(rel_row)
 
+            # --- FOOOF Spectral Decomposition ---
+            if args.fooof:
+                fooof_results = fooof_placeholder(f, pxx1, f_range, settings)
+                fooof_results_t[(sub, epoch, ch)] = fooof_results
+
                 # --- FOOOF Components ---
                 aperiodic_component = fooof_results['ap_fit']
                 full_spectrum = fooof_results['power_spectrum']
@@ -161,23 +161,25 @@ for sub, fname in enumerate(file_names):
                 exponent.append(fooof_results['aperiodic_params'][1])
 
                 # --- Periodic Band Power (AUC and Mean) ---
-                periodic_PSD_row = [
-                    np.trapz(periodic_component[f1]),
-                    np.trapz(periodic_component[f2]),
-                    np.trapz(periodic_component[f3]),
-                    np.trapz(periodic_component[f4]),
-                    np.trapz(periodic_component[f5[f5<=40]])
-                ]
-                periodic_PSD.append(periodic_PSD_row)
+                # Only compute if bandpower is also requested, to match output structure
+                if args.bandpower:
+                    periodic_PSD_row = [
+                        np.trapz(periodic_component[f1]),
+                        np.trapz(periodic_component[f2]),
+                        np.trapz(periodic_component[f3]),
+                        np.trapz(periodic_component[f4]),
+                        np.trapz(periodic_component[f5[f5<=40]])
+                    ]
+                    periodic_PSD.append(periodic_PSD_row)
 
-                periodic_PSD_m_row = [
-                    np.mean(periodic_component[f1]),
-                    np.mean(periodic_component[f2]),
-                    np.mean(periodic_component[f3]),
-                    np.mean(periodic_component[f4]),
-                    np.mean(periodic_component[f5[f5<=40]])
-                ]
-                periodic_PSD_m.append(periodic_PSD_m_row)
+                    periodic_PSD_m_row = [
+                        np.mean(periodic_component[f1]),
+                        np.mean(periodic_component[f2]),
+                        np.mean(periodic_component[f3]),
+                        np.mean(periodic_component[f4]),
+                        np.mean(periodic_component[f5[f5<=40]])
+                    ]
+                    periodic_PSD_m.append(periodic_PSD_m_row)
 
             # --- Entropy ---
             if args.entropy:
@@ -228,5 +230,8 @@ if len(sgf_t) > 0:
 
 with open(os.path.join(args.directory, 'feature.pkl'), 'wb') as f:
     pickle.dump(feature, f)
+
+
+
 
 print('Feature extraction complete and saved to feature.pkl')

@@ -1,9 +1,10 @@
 clear;
 clc;
-eeglab; close;
+eeglab; 
+close;
 
 %% --- Load EEG Files ---
-directory = '/Volumes/NED_Backup3/Q1K_Preprocessed_2s_Happe/5 - processed'; 
+directory = '/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s'; 
 listing = dir(fullfile(directory, '*.set'));
 file_names = {listing.name};
 names = file_names(~startsWith(file_names, '._')); % Remove macOS hidden files

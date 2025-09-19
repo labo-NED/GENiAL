@@ -18,7 +18,7 @@ import os
 start_time = time.time()
 
 # === EXAMPLE COMMANDS ===
-# To run with 2s preprocessed: python3 Scripts/feature_extraction.py --hurst --fooof --bandpower --directory "/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s" --output-dir "/Volumes/NED_Backup3/Features/"
+# To run with 2s preprocessed: python3 Scripts/feature_extraction.py --fooof --bandpower --directory "/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s" --output-dir "/Volumes/NED_Backup3/Features/"
 
 # To run with 5s preprocessed: python3 Scripts/feature_extraction.py --entropy --mse --directory "/Volumes/NED_Backup3/COMBINED_Q1K_BC_5s" --output-dir "/Volumes/NED_Backup3/Features/"
 
