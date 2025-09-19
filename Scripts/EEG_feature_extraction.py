@@ -109,17 +109,14 @@ pxx_t = {}
 
 # Loop through each participant
 for sub, id in enumerate(names):
-    eeg = mne.io.read_raw_eeglab(os.path.join(directory, id), preload=True)
+    eeg = mne.io.read_epochs_eeglab(os.path.join(directory, id))
     EEG_label = eeg.ch_names
     Fs = int(eeg.info['sfreq'])
-    data = eeg.get_data()  # shape: (n_channels, n_times)
-    n_chans = data.shape[0]
-    n_trials = 1
-    if data.ndim == 3:
-        n_trials = data.shape[2]
-    else:
-        n_trials = 1
-        data = data[:, :, np.newaxis]  # (n_channels, n_times, 1)
+    data = eeg.get_data()  # shape: (n_epochs, n_channels, n_times)
+    n_chans = data.shape[1]
+    n_trials = data.shape[0]
+    # Reshape to (n_channels, n_times, n_epochs) for consistency
+    data = np.transpose(data, (1, 2, 0))
 
     for ch in range(n_chans):
         # Initialize variables for this channel
