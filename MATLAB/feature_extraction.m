@@ -4,7 +4,7 @@ eeglab;
 close;
 
 %% --- Load EEG Files ---
-directory = '/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s'; 
+directory = '/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s/GENIAL'; 
 listing = dir(fullfile(directory, '*.set'));
 file_names = {listing.name};
 names = file_names(~startsWith(file_names, '._')); % Remove macOS hidden files

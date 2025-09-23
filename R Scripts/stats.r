@@ -12,11 +12,14 @@ library(jmv)
 library(haven)
 
 ########################## Import dataset ############################
-# CLUSTERS WITH CONTROLS
+# CLUSTERS WITH KMEANS (+ CONTROLS)
 # original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_cluster_db.csv")
 
-# CLUSTERS WITH ONLY ADHD/ASD
-original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_cluster_db.csv")
+# CLUSTERS WITH KMEANS (ONLY ADHD/ASD)
+# original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_cluster_db.csv")
+
+# CLUSTER WITH GMM (ONLY ASD/ADHD)
+original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_gfmm_cluster_db.csv")
 
 og_dataset_copy <- original_dataset # Make a copy for preprocessing
 
@@ -94,7 +97,7 @@ sink(NULL) # Disable active sink
 og_dataset_copy$sex <- factor(og_dataset_copy$sex)
 
 # Save
-write.csv(og_dataset_copy, file = "FINAL_DATABASE_USED_IN_R.csv", row.names = FALSE)
+write.csv(og_dataset_copy, file = "FINAL_DATABASE_USED_IN_R_GMM.csv", row.names = FALSE)
 
 ################### Basic Stats ########################
 
@@ -271,7 +274,7 @@ sink(NULL)
 ########## MANCOVA 
 # --- Setup
 df <- og_dataset_copy
-df$cluster <- factor(df$cluster, levels = c(0, 1))
+df$cluster <- factor(df$cluster, levels = c(0, 1, 2, 3))
 df$sex     <- factor(df$sex)
 
 DVS <- c(
@@ -488,7 +491,9 @@ demographic_summary <- df %>%
     female_n = sum(sex == "F", na.rm = TRUE),
     female_perc = round(100 * mean(sex == "F", na.rm = TRUE), 1),
     age_mean = round(mean(age, na.rm = TRUE), 1),
-    age_sd = round(sd(age, na.rm = TRUE), 1)
+    age_sd = round(sd(age, na.rm = TRUE), 1),
+    iq_mean = round(mean(IQ, na.rm = TRUE), 1),
+    iq_sd = round(sd(IQ, na.rm = TRUE), 1)
   )
 
 # Frequency tables for categorical variables by cluster

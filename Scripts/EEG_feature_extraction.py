@@ -4,9 +4,14 @@ import mne
 from scipy.signal import welch, windows
 import pickle
 import pandas as pd
+import warnings
 from mne_features.feature_extraction import FeatureExtractor
 from fooof import FOOOF
 from neurokit2 import entropy_multiscale
+
+# Suppress FOOOF deprecation warnings
+warnings.filterwarnings("ignore", message=".*fooof.*deprecated.*")
+warnings.filterwarnings("ignore", message=".*scipy.misc.*deprecated.*")
 
 def estimate_hurst_exponent(signal):
     """
@@ -50,7 +55,7 @@ def fooof_fit(f, pxx, f_range, settings):
         fm.fit(f, pxx, f_range)
         
         # Get aperiodic fit
-        ap_fit = fm._ap_fit(f)
+        ap_fit = fm._ap_fit
         
         # Get periodic component (peaks)
         fooofed_spectrum = fm.power_spectrum_
@@ -77,8 +82,8 @@ def fooof_fit(f, pxx, f_range, settings):
 # --- Load EEG Files ---
 
 ## TO BE UPDATED MANUALLY ##
-directory = '/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s'
-project_folder = 'COMBINED_Q1K_BC_2s'
+directory = '/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s/GENIAL/TEST'
+project_folder = 'COMBINED_Q1K_BC_2s_GENIAL_TEST'
 entropy = False
 mse = False
 hurst = False
@@ -89,8 +94,15 @@ bandpower = True
 file_names = [f for f in os.listdir(directory) if f.endswith('.set')]
 names = [f for f in file_names if not f.startswith('._')]  # Remove macOS hidden files
 
+print(f"🚀 Starting EEG Feature Extraction")
+print(f"📁 Directory: {directory}")
+print(f"📊 Found {len(names)} EEG files to process")
+print(f"⚙️  Features enabled: FOOOF={fooof}, Band Power={bandpower}, Hurst={hurst}, MSE={mse}, Entropy={entropy}")
+print(f"⏱️  Estimated time: {len(names) * 3:.0f}-{len(names) * 5:.0f} minutes ({len(names) * 3/60:.1f}-{len(names) * 5/60:.1f} hours)")
+print("=" * 80)
+
 f_range = [1, 40]
-settings = {'peak_width_limits': [0.5, 18], 'max_n_peaks': 10}
+settings = {'peak_width_limits': [1.0, 12], 'max_n_peaks': 10}  # Peak width limits: 1.0-12 Hz
 
 # Initialize containers
 aperiodic_component_t = {}
@@ -109,6 +121,8 @@ pxx_t = {}
 
 # Loop through each participant
 for sub, id in enumerate(names):
+    print(f"Processing file {sub+1}/{len(names)}: {id}")
+    
     eeg = mne.io.read_epochs_eeglab(os.path.join(directory, id))
     EEG_label = eeg.ch_names
     Fs = int(eeg.info['sfreq'])
@@ -136,9 +150,9 @@ for sub, id in enumerate(names):
                 mse_values.append(mse_vals)
             mse_mean = np.mean(mse_values, axis=0)
             scales = np.arange(1, maxscale + 1)
-            CI = np.trapz(mse_mean, scales)
-            CI_lowScale = np.trapz(mse_mean[:maxscale//2], scales[:maxscale//2])
-            CI_highScale = np.trapz(mse_mean[maxscale//2:], scales[maxscale//2:])
+            CI = np.trapezoid(mse_mean, scales)
+            CI_lowScale = np.trapezoid(mse_mean[:maxscale//2], scales[:maxscale//2])
+            CI_highScale = np.trapezoid(mse_mean[maxscale//2:], scales[maxscale//2:])
             # Store MSE results (you may want to add these to feature dictionary)
             print(f"Channel {ch}: MSE computed - CI: {CI:.4f}")
 
@@ -227,13 +241,13 @@ for sub, id in enumerate(names):
 
             # --- Periodic Band Power (AUC and Mean) ---
             if bandpower:
-                periodic_PSD.setdefault(sub, {}).setdefault(ch, {})[1] = np.trapz(periodic_component[f1]) if len(f1) > 0 else np.nan
-                periodic_PSD[sub][ch][2] = np.trapz(periodic_component[f2]) if len(f2) > 0 else np.nan
-                periodic_PSD[sub][ch][3] = np.trapz(periodic_component[f3]) if len(f3) > 0 else np.nan
-                periodic_PSD[sub][ch][4] = np.trapz(periodic_component[f4]) if len(f4) > 0 else np.nan
+                periodic_PSD.setdefault(sub, {}).setdefault(ch, {})[1] = np.trapezoid(periodic_component[f1]) if len(f1) > 0 else np.nan
+                periodic_PSD[sub][ch][2] = np.trapezoid(periodic_component[f2]) if len(f2) > 0 else np.nan
+                periodic_PSD[sub][ch][3] = np.trapezoid(periodic_component[f3]) if len(f3) > 0 else np.nan
+                periodic_PSD[sub][ch][4] = np.trapezoid(periodic_component[f4]) if len(f4) > 0 else np.nan
                 # For f5(f5<=40): restrict to f <= 40
                 f5_40 = f5[f[f5] <= 40]
-                periodic_PSD[sub][ch][5] = np.trapz(periodic_component[f5_40]) if len(f5_40) > 0 else np.nan
+                periodic_PSD[sub][ch][5] = np.trapezoid(periodic_component[f5_40]) if len(f5_40) > 0 else np.nan
 
                 periodic_PSD_m.setdefault(sub, {}).setdefault(ch, {})[1] = np.mean(periodic_component[f1]) if len(f1) > 0 else np.nan
                 periodic_PSD_m[sub][ch][2] = np.mean(periodic_component[f2]) if len(f2) > 0 else np.nan
@@ -358,4 +372,11 @@ except Exception as e:
     print(f'Warning: CSV export failed: {e}')
     print('Pickle file saved successfully, but CSV export encountered an error')
 
-print('Feature extraction complete and saved to feature.pkl')
+# Final summary
+print("\n" + "=" * 80)
+print(f"🎉 FEATURE EXTRACTION COMPLETE!")
+print(f"📊 Processed {len(names)} files")
+print(f"📁 Output files saved to: {directory}")
+print(f"   - {project_folder}_feature.pkl")
+print(f"   - {project_folder}_feature_extraction_results.csv")
+print("=" * 80)
