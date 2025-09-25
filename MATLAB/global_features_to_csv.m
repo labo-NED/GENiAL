@@ -48,46 +48,42 @@ fprintf('Processing %d participants with %d channels each...\n', nSub, n_channel
 % === Compute global (all-channel) feature means ===
 
 % Aperiodic features - average across all channels
-T.Global_Offset = mean(feature.offset, 2, 'omitnan');
-T.Global_Exponent = mean(feature.exponent, 2, 'omitnan');
+T.Aperiodic_Offset = mean(feature.offset, 2, 'omitnan');
+T.Aperiodic_Exponent = mean(feature.exponent, 2, 'omitnan');
 
-% Additional aperiodic features - compute summary statistics
-% Average across both channels AND frequencies to get single values per participant
-T.Global_Aperiodic_Component_Mean = mean(mean(feature.aperiodic_component_t, 2, 'omitnan'), 3, 'omitnan');
-T.Global_Full_Spectrum_Mean = mean(mean(feature.full_spectrum_t, 2, 'omitnan'), 3, 'omitnan');
-T.Global_FOOOFed_Spectrum_Mean = mean(mean(feature.fooofed_spectrum_t, 2, 'omitnan'), 3, 'omitnan');
+% Absolute band power - average across all channels
+T.Average_Delta_Power = mean(feature.PSD(:, :, 1), 2, 'omitnan');
+T.Average_Theta_Power = mean(feature.PSD(:, :, 2), 2, 'omitnan');
+T.Average_Alpha_Power = mean(feature.PSD(:, :, 3), 2, 'omitnan');
+T.Average_Beta_Power = mean(feature.PSD(:, :, 4), 2, 'omitnan');
+T.Average_Gamma_Power = mean(feature.PSD(:, :, 5), 2, 'omitnan');
 
 % Periodic PSD (AUC) per band - average across all channels
 for b = 1:length(band_labels)
     label = band_labels{b};
-    T.(['Global_PeriodicPSD_' label]) = mean(feature.periodic_PSD(:, :, b), 2, 'omitnan');
+    T.(['Average_PeriodicPSD_' label]) = mean(feature.periodic_PSD(:, :, b), 2, 'omitnan');
 end
 
-% Relative theta - average across all channels
-T.Global_RelThetaPSD = mean(feature.relative_PSD(:, :, 2), 2, 'omitnan');
+% Relative band power - average across all channels
+T.Average_RelDelta_Power = mean(feature.relative_PSD(:, :, 1), 2, 'omitnan');
+T.Average_RelTheta_Power = mean(feature.relative_PSD(:, :, 2), 2, 'omitnan');
+T.Average_RelAlpha_Power = mean(feature.relative_PSD(:, :, 3), 2, 'omitnan');
+T.Average_RelBeta_Power = mean(feature.relative_PSD(:, :, 4), 2, 'omitnan');
+T.Average_RelGamma_Power = mean(feature.relative_PSD(:, :, 5), 2, 'omitnan');
 
-% // % === Optional: Add standard deviations for variability measures ===
-% // T.Global_Offset_std = std(feature.offset, 0, 2, 'omitnan');
-% // T.Global_Exponent_std = std(feature.exponent, 0, 2, 'omitnan');
-% // T.Global_Aperiodic_Component_std = std(std(feature.aperiodic_component_t, 0, 2, 'omitnan'), 0, 3, 'omitnan');
-% // T.Global_Full_Spectrum_std = std(std(feature.full_spectrum_t, 0, 2, 'omitnan'), 0, 3, 'omitnan');
-% // T.Global_FOOOFed_Spectrum_std = std(std(feature.fooofed_spectrum_t, 0, 2, 'omitnan'), 0, 3, 'omitnan');
-
-for b = 1:length(band_labels)
-    label = band_labels{b};
-    T.(['Global_PeriodicPSD_' label '_std']) = std(feature.periodic_PSD(:, :, b), 0, 2, 'omitnan');
-end
-
-T.Global_RelThetaPSD_std = std(feature.relative_PSD(:, :, 2), 0, 2, 'omitnan');
+% Hurst exponent - average across all channels
+% T.Average_Hurst = mean(feature.hurst, 1, 'omitnan')';
 
 % === Display summary statistics ===
 fprintf('\n=== Global Feature Summary ===\n');
 fprintf('Number of participants: %d\n', nSub);
 fprintf('Number of channels: %d\n', n_channels);
 fprintf('Features computed:\n');
-fprintf('  - Aperiodic: Offset, Exponent, Aperiodic Component, Full Spectrum, FOOOFed Spectrum (mean ± std)\n');
-fprintf('  - Periodic PSD: Delta, Theta, Alpha, Beta, Gamma (mean ± std)\n');
-fprintf('  - Relative Theta PSD (mean ± std)\n');
+fprintf('  - Aperiodic: Aperiodic_Offset, Aperiodic_Exponent\n');
+fprintf('  - Average Absolute Power: Delta, Theta, Alpha, Beta, Gamma\n');
+fprintf('  - Average Periodic PSD: Delta, Theta, Alpha, Beta, Gamma\n');
+fprintf('  - Average Relative Power: Delta, Theta, Alpha, Beta, Gamma\n');
+% fprintf('  - Average Hurst Exponent\n');
 
 % === Export CSV ===
 out_path = '/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s/GENIAL/features_global_summary.csv';
