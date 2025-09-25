@@ -599,3 +599,390 @@ cat("- Cramér's V: 0.1 = small, 0.3 = medium, 0.5 = large\n\n")
 
 sink()
 sink(NULL)
+
+
+# ================ EEG FEATURE ANALYSIS ==================
+install.packages("car", "psych", "corrplot", "randomForest", "VIM", "GGally")
+
+
+eeg_behavioral_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/merged_EEG_behavioral_data.csv")
+
+# Load required libraries
+library(car)      # for MANOVA and Levene's test
+library(psych)    # for descriptive statistics
+library(ggplot2)  # for visualizations
+library(dplyr)    # for data manipulation
+library(corrplot) # for correlation plots
+library(randomForest) # for feature importance
+library(VIM)      # for missing data visualization
+library(GGally)   # for scatter plot matrix
+
+# Define EEG feature columns
+eeg_features <- c("Aperiodic_Offset", "Aperiodic_Exponent", 
+                  "Average_Delta_Power", "Average_Theta_Power", "Average_Alpha_Power", 
+                  "Average_Beta_Power", "Average_Gamma_Power",
+                  "Average_PeriodicPSD_Delta", "Average_PeriodicPSD_Theta", 
+                  "Average_PeriodicPSD_Alpha", "Average_PeriodicPSD_Beta", 
+                  "Average_PeriodicPSD_Gamma",
+                  "Average_RelDelta_Power", "Average_RelTheta_Power", 
+                  "Average_RelAlpha_Power", "Average_RelBeta_Power", "Average_RelGamma_Power")
+
+# Convert cluster to factor
+eeg_behavioral_dataset$cluster <- as.factor(eeg_behavioral_dataset$cluster)
+
+# Create output file for EEG analysis
+sink("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/eeg_analysis_output.txt")
+
+cat("========================================\n")
+cat("EEG FEATURE ANALYSIS\n")
+cat("========================================\n\n")
+
+# 1. DESCRIPTIVE STATISTICS BY CLUSTER
+cat("1. DESCRIPTIVE STATISTICS BY CLUSTER\n")
+cat("=====================================\n\n")
+
+# Overall descriptives
+cat("Overall Sample Size:", nrow(eeg_behavioral_dataset), "\n")
+cat("Cluster Distribution:\n")
+print(table(eeg_behavioral_dataset$cluster))
+cat("\n")
+
+# Descriptive statistics by cluster
+for(cluster_id in levels(eeg_behavioral_dataset$cluster)) {
+  cat("CLUSTER", cluster_id, "DESCRIPTIVES:\n")
+  cat("----------------------------------------\n")
+  cluster_data <- eeg_behavioral_dataset[eeg_behavioral_dataset$cluster == cluster_id, eeg_features]
+  desc_stats <- describe(cluster_data)
+  print(desc_stats)
+  cat("\n")
+}
+
+# 2. ASSUMPTION TESTING FOR PARAMETRIC TESTS
+cat("2. ASSUMPTION TESTING\n")
+cat("=====================\n\n")
+
+# Test normality for each EEG feature by cluster
+cat("Shapiro-Wilk Tests for Normality (by cluster):\n")
+cat("(Note: p < 0.05 indicates non-normality)\n\n")
+
+normality_results <- data.frame()
+for(feature in eeg_features) {
+  for(cluster_id in levels(eeg_behavioral_dataset$cluster)) {
+    cluster_data <- eeg_behavioral_dataset[eeg_behavioral_dataset$cluster == cluster_id, feature]
+    if(length(cluster_data) >= 3) {  # Minimum sample size for Shapiro-Wilk
+      shapiro_test <- shapiro.test(cluster_data)
+      normality_results <- rbind(normality_results, 
+                                data.frame(Feature = feature, 
+                                         Cluster = cluster_id, 
+                                         W = shapiro_test$statistic, 
+                                         p_value = shapiro_test$p.value))
+    }
+  }
+}
+print(normality_results)
+cat("\n")
+
+# Levene's test for homogeneity of variance
+cat("Levene's Test for Homogeneity of Variance:\n")
+cat("(p < 0.05 indicates unequal variances)\n\n")
+
+levene_results <- data.frame()
+for(feature in eeg_features) {
+  levene_test <- leveneTest(eeg_behavioral_dataset[[feature]] ~ eeg_behavioral_dataset$cluster)
+  levene_results <- rbind(levene_results, 
+                         data.frame(Feature = feature, 
+                                  F = levene_test$`F value`[1], 
+                                  p_value = levene_test$`Pr(>F)`[1]))
+}
+print(levene_results)
+cat("\n")
+
+# 3. CLUSTER DIFFERENCES IN EEG FEATURES
+cat("3. CLUSTER DIFFERENCES IN EEG FEATURES\n")
+cat("======================================\n\n")
+
+# One-way ANOVA for each EEG feature
+cat("One-way ANOVA Results for Each EEG Feature:\n")
+cat("(p < 0.05 indicates significant differences between clusters)\n\n")
+
+anova_results <- data.frame()
+for(feature in eeg_features) {
+  formula_str <- paste(feature, "~ cluster")
+  anova_model <- aov(as.formula(formula_str), data = eeg_behavioral_dataset)
+  anova_summary <- summary(anova_model)
+  
+  anova_results <- rbind(anova_results, 
+                        data.frame(Feature = feature, 
+                                 F = anova_summary[[1]]$`F value`[1], 
+                                 p_value = anova_summary[[1]]$`Pr(>F)`[1]))
+}
+print(anova_results)
+cat("\n")
+
+# Post-hoc pairwise comparisons (Tukey HSD)
+cat("Post-hoc Pairwise Comparisons (Tukey HSD):\n")
+cat("==========================================\n\n")
+
+for(feature in eeg_features) {
+  if(anova_results[anova_results$Feature == feature, "p_value"] < 0.05) {
+    cat("Significant differences found for", feature, ":\n")
+    formula_str <- paste(feature, "~ cluster")
+    anova_model <- aov(as.formula(formula_str), data = eeg_behavioral_dataset)
+    tukey_results <- TukeyHSD(anova_model)
+    print(tukey_results)
+    cat("\n")
+  }
+}
+
+# MANOVA for all EEG features together
+cat("4. MULTIVARIATE ANALYSIS OF VARIANCE (MANOVA)\n")
+cat("=============================================\n\n")
+
+# Create formula for MANOVA
+manova_formula <- as.formula(paste("cbind(", paste(eeg_features, collapse = ", "), ") ~ cluster"))
+
+# Perform MANOVA
+manova_model <- manova(manova_formula, data = eeg_behavioral_dataset)
+manova_summary <- summary(manova_model)
+
+cat("MANOVA Results:\n")
+print(manova_summary)
+
+# Pillai's trace test
+cat("\nPillai's Trace Test:\n")
+print(summary(manova_model, test = "Pillai"))
+
+# Wilks' Lambda test
+cat("\nWilks' Lambda Test:\n")
+print(summary(manova_model, test = "Wilks"))
+
+# Hotelling-Lawley trace test
+cat("\nHotelling-Lawley Trace Test:\n")
+print(summary(manova_model, test = "Hotelling-Lawley"))
+
+# Roy's largest root test
+cat("\nRoy's Largest Root Test:\n")
+print(summary(manova_model, test = "Roy"))
+
+cat("\n")
+
+# 5. FEATURE IMPORTANCE ANALYSIS
+cat("5. FEATURE IMPORTANCE ANALYSIS\n")
+cat("==============================\n\n")
+
+# Random Forest for feature importance
+cat("Random Forest Feature Importance:\n")
+cat("(Higher values indicate more important features for cluster prediction)\n\n")
+
+# Prepare data for random forest
+rf_data <- eeg_behavioral_dataset[, c("cluster", eeg_features)]
+rf_data <- rf_data[complete.cases(rf_data), ]  # Remove rows with missing values
+
+# Train random forest
+rf_model <- randomForest(cluster ~ ., data = rf_data, importance = TRUE, ntree = 1000)
+
+# Extract feature importance
+importance_scores <- importance(rf_model)
+importance_df <- data.frame(
+  Feature = rownames(importance_scores),
+  MeanDecreaseAccuracy = importance_scores[, "MeanDecreaseAccuracy"],
+  MeanDecreaseGini = importance_scores[, "MeanDecreaseGini"]
+)
+
+# Sort by importance
+importance_df <- importance_df[order(importance_df$MeanDecreaseAccuracy, decreasing = TRUE), ]
+print(importance_df)
+cat("\n")
+
+# 6. LOW PROBABILITY CLUSTER ANALYSIS
+cat("6. LOW PROBABILITY CLUSTER ANALYSIS\n")
+cat("===================================\n\n")
+
+# Define low probability threshold (e.g., max probability < 0.7)
+eeg_behavioral_dataset$max_cluster_prob <- pmax(
+  eeg_behavioral_dataset$cluster_0_prob,
+  eeg_behavioral_dataset$cluster_1_prob,
+  eeg_behavioral_dataset$cluster_2_prob,
+  eeg_behavioral_dataset$cluster_3_prob
+)
+
+eeg_behavioral_dataset$low_confidence <- eeg_behavioral_dataset$max_cluster_prob < 0.7
+
+cat("Low Confidence Classifications (max probability < 0.7):\n")
+print(table(eeg_behavioral_dataset$low_confidence))
+cat("\n")
+
+# Compare EEG features between high and low confidence classifications
+cat("EEG Feature Differences: High vs Low Confidence Classifications\n")
+cat("(t-tests for each feature)\n\n")
+
+confidence_comparison <- data.frame()
+for(feature in eeg_features) {
+  high_conf <- eeg_behavioral_dataset[!eeg_behavioral_dataset$low_confidence, feature]
+  low_conf <- eeg_behavioral_dataset[eeg_behavioral_dataset$low_confidence, feature]
+  
+  if(length(high_conf) > 1 && length(low_conf) > 1) {
+    t_test <- t.test(high_conf, low_conf)
+    confidence_comparison <- rbind(confidence_comparison, 
+                                 data.frame(Feature = feature, 
+                                          High_Conf_Mean = mean(high_conf, na.rm = TRUE),
+                                          Low_Conf_Mean = mean(low_conf, na.rm = TRUE),
+                                          t_statistic = t_test$statistic,
+                                          p_value = t_test$p.value))
+  }
+}
+print(confidence_comparison)
+cat("\n")
+
+# 7. CORRELATION ANALYSIS
+cat("7. CORRELATION ANALYSIS\n")
+cat("=======================\n\n")
+
+# Correlation matrix of EEG features
+eeg_correlations <- cor(eeg_behavioral_dataset[, eeg_features], use = "complete.obs")
+cat("Correlation Matrix of EEG Features:\n")
+print(round(eeg_correlations, 3))
+cat("\n")
+
+# Find highly correlated features (|r| > 0.7)
+high_correlations <- which(abs(eeg_correlations) > 0.7 & eeg_correlations != 1, arr.ind = TRUE)
+if(nrow(high_correlations) > 0) {
+  cat("Highly Correlated Features (|r| > 0.7):\n")
+  for(i in 1:nrow(high_correlations)) {
+    row_idx <- high_correlations[i, 1]
+    col_idx <- high_correlations[i, 2]
+    cat(rownames(eeg_correlations)[row_idx], "&", 
+        colnames(eeg_correlations)[col_idx], 
+        "r =", round(eeg_correlations[row_idx, col_idx], 3), "\n")
+  }
+} else {
+  cat("No highly correlated features found (|r| > 0.7)\n")
+}
+cat("\n")
+
+sink()
+sink(NULL)
+
+# 8. VISUALIZATIONS
+cat("Creating visualizations...\n")
+
+# Create output directory for plots if it doesn't exist
+if(!dir.exists("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots")) {
+  dir.create("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots", recursive = TRUE)
+}
+
+# 8.1 Box plots for each EEG feature by cluster
+pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots/eeg_features_by_cluster_boxplots.pdf", 
+    width = 12, height = 8)
+
+# Create box plots for each EEG feature
+for(feature in eeg_features) {
+  p <- ggplot(eeg_behavioral_dataset, aes(x = cluster, y = .data[[feature]], fill = cluster)) +
+    geom_boxplot(alpha = 0.7) +
+    geom_jitter(width = 0.2, alpha = 0.5) +
+    labs(title = paste("Distribution of", feature, "by Cluster"),
+         x = "Cluster", 
+         y = feature) +
+    theme_minimal() +
+    theme(legend.position = "none")
+  print(p)
+}
+
+dev.off()
+
+# 8.2 Correlation heatmap
+pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots/eeg_correlation_heatmap.pdf", 
+    width = 12, height = 10)
+
+corrplot(eeg_correlations, method = "color", type = "upper", 
+         order = "hclust", tl.cex = 0.8, tl.col = "black",
+         title = "EEG Features Correlation Matrix")
+
+dev.off()
+
+# 8.3 Feature importance plot
+pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots/feature_importance.pdf", 
+    width = 10, height = 8)
+
+# Create feature importance plot
+importance_plot <- ggplot(importance_df, aes(x = reorder(Feature, MeanDecreaseAccuracy), 
+                                            y = MeanDecreaseAccuracy)) +
+  geom_col(fill = "steelblue", alpha = 0.7) +
+  coord_flip() +
+  labs(title = "EEG Feature Importance for Cluster Prediction",
+       x = "EEG Features",
+       y = "Mean Decrease in Accuracy") +
+  theme_minimal()
+
+print(importance_plot)
+dev.off()
+
+# 8.4 Cluster probability distributions
+pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots/cluster_probability_distributions.pdf", 
+    width = 12, height = 8)
+
+# Plot distribution of maximum cluster probabilities
+prob_plot <- ggplot(eeg_behavioral_dataset, aes(x = max_cluster_prob)) +
+  geom_histogram(bins = 20, fill = "lightblue", alpha = 0.7, color = "black") +
+  geom_vline(xintercept = 0.7, color = "red", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Maximum Cluster Probabilities",
+       x = "Maximum Cluster Probability",
+       y = "Frequency") +
+  theme_minimal()
+
+print(prob_plot)
+
+# Plot cluster probabilities by actual cluster assignment
+cluster_prob_data <- eeg_behavioral_dataset %>%
+  select(cluster, cluster_0_prob, cluster_1_prob, cluster_2_prob, cluster_3_prob) %>%
+  pivot_longer(cols = starts_with("cluster_"), 
+               names_to = "prob_cluster", 
+               values_to = "probability") %>%
+  mutate(prob_cluster = gsub("cluster_", "", prob_cluster),
+         prob_cluster = gsub("_prob", "", prob_cluster))
+
+prob_by_cluster_plot <- ggplot(cluster_prob_data, aes(x = prob_cluster, y = probability, fill = cluster)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "Cluster Probabilities by Actual Cluster Assignment",
+       x = "Probability Cluster",
+       y = "Probability",
+       fill = "Actual Cluster") +
+  theme_minimal()
+
+print(prob_by_cluster_plot)
+dev.off()
+
+# 8.5 Scatter plots for top important features
+pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots/top_features_scatter.pdf", 
+    width = 12, height = 10)
+
+# Get top 6 most important features
+top_features <- head(importance_df$Feature, 6)
+
+# Create scatter plot matrix for top features
+if(length(top_features) >= 2) {
+  pairs_plot <- ggpairs(eeg_behavioral_dataset[, c("cluster", top_features)], 
+                        aes(color = cluster, alpha = 0.6),
+                        lower = list(continuous = "points"),
+                        upper = list(continuous = "cor"),
+                        diag = list(continuous = "densityDiag"))
+  print(pairs_plot)
+}
+
+dev.off()
+
+cat("Visualizations saved to /Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/R_output/plots/\n")
+cat("Analysis complete!\n")
+
+
+
+
+
+
+
+
+
+
+
+
+
