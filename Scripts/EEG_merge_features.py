@@ -5,6 +5,9 @@ import numpy as np
 eeg_features_path = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/EEG/GENIAL/RS-2s/features_global_summary.csv"
 behavioral_data_path = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_gfmm_cluster_db.csv"
 output_path = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/merged_EEG_behavioral_data.csv"
+# eeg_features_path = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/EEG/GENIAL/RS-2s/alpha_peaks.csv"
+# behavioral_data_path = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/merged_EEG_behavioral_data.csv"
+# output_path = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/merged_EEG_behavioral_data_V2.csv"
 
 print("Loading data files...")
 
