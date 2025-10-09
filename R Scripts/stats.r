@@ -556,8 +556,9 @@ for (cl in clusters) {
         angle = angle,
         hjust = hjust
       ),
-      x = 1.1, # position labels outside the pie
-      size = 3,
+      x = 1, # position labels outside the pie
+      size = 5,
+      color = "white",
       inherit.aes = FALSE
     )
 
@@ -620,8 +621,9 @@ for (grp in grouped_clusters) {
         angle = angle,
         hjust = hjust
       ),
-      x = 1.1,
-      size = 3,
+      x = 1, # position labels outside the pie
+      size = 5,
+      color = "white",
       inherit.aes = FALSE
     )
 
