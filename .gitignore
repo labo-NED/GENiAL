@@ -21,3 +21,6 @@ histograms.pdf
 categorical_freq_output.txt
 
 FINAL_DATABASE_USED_IN_R_GMM.csv
+
+CLEAN/Outputs/*
+CLEAN/Redcap_reports/*
