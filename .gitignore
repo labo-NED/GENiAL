@@ -24,3 +24,6 @@ FINAL_DATABASE_USED_IN_R_GMM.csv
 
 CLEAN/Outputs/*
 CLEAN/Redcap_reports/*
+CLEAN/Genetic_cnv_scores/*
+CLEAN/Genetic_files_for_tool/*
+CLEAN/scripts/__pycache__

@@ -49,7 +49,8 @@ def combine_diagnosis_columns(df):
         'psychosis_episodes': ['cfq_ment_psyep_2'],
         'schizophrenia': ['cfq_ment_schizo_2'],
         'epilepsy': ['cfq_ment_epilepsy_2'],
-        'visual_disability': ['cfq_ment_visual_disability_2']
+        'visual_disability': ['cfq_ment_visual_disability_2'],
+        'Tourette_syndrome': ['cfq_ment_ts_2']
     }
 
     def get_positive_diagnoses(row):
@@ -401,9 +402,6 @@ if __name__ == "__main__":
     # Cleanup behavioral scores columns
     behavioral_preprocessed_df = clean_behavioral_scores(ethnicity_preprocessed_df)
     
-    # Cleanup genetics columns
-    ## When CNV_done is 1, scores need to be 0
-
     final_df = behavioral_preprocessed_df
 
     # Save output to CSV
