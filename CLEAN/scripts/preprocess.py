@@ -1,6 +1,24 @@
 import pandas as pd
 import os
 
+# Combine all rows per participant (record_id) into one row
+# For each column, take the first non-null value across all rows for the same record_id
+def combine_participant_data(group):
+    """Combine multiple rows for the same participant into one row"""
+    combined = {}
+    for col in group.columns:
+        if col == 'record_id':
+            # For record_id, just take the first value (they should all be the same)
+            combined[col] = group[col].iloc[0]
+        else:
+            # Get the first non-null value for other columns
+            non_null_values = group[col].dropna()
+            if len(non_null_values) > 0:
+                combined[col] = non_null_values.iloc[0]
+            else:
+                combined[col] = None
+    return pd.Series(combined)
+
 def combine_diagnosis_columns(df):
     """
     Combine the diagnosis columns into a single column.
@@ -11,20 +29,27 @@ def combine_diagnosis_columns(df):
         'autism': ['ghf_asd', 'diag_asd'],
         'autism_behavior': ['ghf_autistic_behav'],
         'adhd': ['ghf_adhd', 'diag_adhd'],
-        'intellectual_disability': ['ghf_id', 'diag_id', 'ghf_intel'],
+        'intellectual_disability': ['ghf_id', 'diag_intel'],
         'neurological_conditions': ['ghf_neuro'],
-        'anxiety': ['ghf_anxiety'],
+        'anxiety': ['ghf_anxiety', 'cfq_ment_ad_2'],
         'cognitive_impairment': ['ghf_cog_imp'],
         'language_impairment': ['ghf_li'],
         'learning_disability': ['ghf_ld', 'diag_learn'],
         'communication_disorder': ['diag_comm'],
         'delay_fine_motor_development': ['ghf_delay_fmd'],
         'motor_disorder': ['diag_motor'],
-        'aggressive_behavior': ['ghf_aggr_behav'],
+        'aggressive_behavior': ['ghf_agg_behav'],
         'fetal_alcohol_syndrome': ['diag_fas'],
-        'hearing_disability': ['diag_hearing2'],
+        'hearing_disability': ['diag_hearing', 'cfq_ment_hearing_disability_2'],
         'physical_disability': ['diag_phys'],
-        'genetic_disorder': ['diag_gene']
+        'genetic_disorder': ['diag_gene'],
+        'depression_disorder': ['cfq_ment_dd_2'],
+        'bipolar_disorder': ['cfq_ment_bd_2'],
+        'ocd': ['cfq_ment_ocd_2'],
+        'psychosis_episodes': ['cfq_ment_psyep_2'],
+        'schizophrenia': ['cfq_ment_schizo_2'],
+        'epilepsy': ['cfq_ment_epilepsy_2'],
+        'visual_disability': ['cfq_ment_visual_disability_2']
     }
 
     def get_positive_diagnoses(row):
@@ -44,6 +69,11 @@ def combine_diagnosis_columns(df):
                         if int(val) == 2:
                             found_positive = True
                             break
+                    elif col.startswith('cfq_ment_'):
+                        # cfq_ment_ fields: 1 = yes, 0 = no
+                        if int(val) == 1:
+                            found_positive = True
+                            break
             if found_positive:
                 positive_labels.append(label)
         return ', '.join(positive_labels) if positive_labels else 'None'
@@ -60,23 +90,101 @@ def combine_diagnosis_columns(df):
 
     return df
 
-def extract_specific_columns(isSave=True):
+def combine_ethnicity_columns(df):
+    """
+    Combine ethnicity checkbox columns into a single comma-separated label column
+    and drop the original checkbox columns.
+    """
+
+    ethnicity_label_map = {
+        'Indigenous': 'fbiq_q9___1',
+        'Arab': 'fbiq_q9___2',
+        'Black': 'fbiq_q9___3',
+        'Chinese': 'fbiq_q9___4',
+        'Filipino': 'fbiq_q9___5',
+        'Japanese': 'fbiq_q9___6',
+        'Korean': 'fbiq_q9___7',
+        'Latin_American': 'fbiq_q9___8',
+        'South_Asian': 'fbiq_q9___9',
+        'Southeast_Asian': 'fbiq_q9___10',
+        'West_Asian': 'fbiq_q9___11',
+        'White_Caucasian': 'fbiq_q9___12',
+        'Other_ethnicity': 'fbiq_q9___13',
+    }
+
+    def get_ethnicities(row):
+        labels = []
+        for label, col in ethnicity_label_map.items():
+            if col in row and pd.notnull(row[col]):
+                val = row[col]
+                try:
+                    is_checked = int(val) == 1
+                except (ValueError, TypeError):
+                    is_checked = str(val).strip() == '1'
+                if is_checked:
+                    labels.append(label)
+        return ', '.join(labels) if labels else 'None'
+
+    df['ethnicities'] = df.apply(get_ethnicities, axis=1)
+
+    # Drop original checkbox columns if present
+    checkbox_cols = [col for col in ethnicity_label_map.values() if col in df.columns]
+    if checkbox_cols:
+        df = df.drop(columns=checkbox_cols)
+
+    return df
+
+def clean_behavioral_scores(df_original):
+    """
+    Clean the behavioral scores columns.
+    """
+    df = df_original.copy()
+
+    # 1. SRS Social Cognition T Score
+    df['SRS_social_cognition_tscore'] = df[
+        ['srs2sch_tscore_cog_v3', 'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2'] 
+    ].bfill(axis=1).iloc[:, 0]
+
+    # 2. SRS Social Communication T Score
+    df['SRS_social_communication_tscore'] = df[
+        ['srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2']
+    ].bfill(axis=1).iloc[:, 0]
+
+    # 3. SRS Restrictive & Repetitive T Score
+    df['SRS_restrictive_repetitive_tscore'] = df[
+        ['srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2']
+    ].bfill(axis=1).iloc[:, 0]
+
+    # Attention deficit / hyperactivity
+    df['attention_deficit_hyperactivity_tscore'] = df[
+        ['attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
+        'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactfd_ts',
+        'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore']
+    ].bfill(axis=1).iloc[:, 0]
+
+    cols_to_drop = [
+        'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2',
+        'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2',
+        'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2',
+        'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
+        'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore'
+    ]
+    cols_present = [col for col in cols_to_drop if col in df.columns]
+    if cols_present:
+        df = df.drop(columns=cols_present)
+
+    return df
+
+def extract_specific_columns(input_file, output_file, isSave=True):
     """
     Extract the record_id column from the Q1K database CSV file.
     """
-    # Input file path
-    input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNEEGIQGENCHUSJ_DATA_2025-10-09_1158.csv"
     
-    # Output file path
-    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1KDatabase-ECNEEGIQGENCHUSJ_DATA_2025-10-09.csv"
+    # Read the CSV file
+    df = pd.read_csv(input_file)
     
-    try:
-        # Read the CSV file
-        print(f"Reading CSV file: {input_file}")
-        df = pd.read_csv(input_file)
-        
-        # Extract columns from Q1K Database
-        preprocessed_df = df[[
+    # Extract columns from Q1K Database
+    preprocessed_df = df[[
                             # demog
                             'record_id', 
                             'eeg_participant_code', # participant_id
@@ -84,7 +192,6 @@ def extract_specific_columns(isSave=True):
                             'eeget_date_v2_v2', # test_date
                             'eeg_age_years_testdate', # age_at_test
                             'eeg_sex_birth', # sex
-                            'highest_degree', # family_highest_education_level
                             'fbiq_q9___1', #'Indigenous'
                             'fbiq_q9___2', #'Arab'
                             'fbiq_q9___3', #'Black'
@@ -101,15 +208,14 @@ def extract_specific_columns(isSave=True):
                             'fbiq_q5', #'highest_education_level'
                             'fbiq_q7', # family_income
                             'fbiq_q1', # relation_to_proband
-                            # behavioral
+                            
                             ## DIAGNOSIS
                             'ghf_asd',         # (1 = yes)
                             'diag_asd',        # (2 = yes)
                             'ghf_adhd',        # (1 = yes)
                             'diag_adhd',       # (2 = yes)
                             'ghf_id',          # (1 = yes)
-                            'diag_id',         # (2 = yes)
-                            'ghf_intel',       # (2 = yes)
+                            'diag_intel',      # (2 = yes)
                             'ghf_autistic_behav',
                             'ghf_neuro',       # (neurological conditions e.g. epilepsy, seizures, movement disorder...)
                             'ghf_anxiety',
@@ -119,20 +225,32 @@ def extract_specific_columns(isSave=True):
                             'ghf_ld',          # (learning disability) (1 = yes)
                             'diag_learn',      # (2 = yes)
                             'ghf_delay_fmd',   # (fine motor development)
-                            'ghf_aggr_behav',
+                            'ghf_agg_behav',
                             'diag_motor',      # (Tourette, etc) (2 = yes)
+                            'cfq_ment_ts_2',   # Tourette's Syndrome (1 = Yes, 0 = No)
                             'diag_fas',        # (fetal alc., s) (2 = yes)
-                            'diag_hearing2',   # (2 = yes)
+                            'diag_hearing',    # (2 = yes)
+                            'cfq_ment_hearing_disability_2', # Hearing Disability (1 = Yes, 0 = No)
                             'diag_phys',       # (2 = yes)
                             'diag_gene',       # (genetic disorder) (2 = yes)
-                            ## Other behavioral measures
-                            'SRS_social_cognition_tscore',
-                            'SRS_social_communication_tscore',
-                            'SRS_restrictive_repetitive_tscore',
-                            'attention_deficit_hyperactivity_tscore',
+                            'cfq_ment_dd_2',       # Depression Disorder (1 = Yes, 0 = No)
+                            'cfq_ment_ad_2',       # Anxiety Disorder (1 = Yes, 0 = No)
+                            'cfq_ment_bd_2',       # Bipolar Disorder (1 = Yes, 0 = No)
+                            'cfq_ment_ocd_2',      # Obsessive Compulsive Disorder (1 = Yes, 0 = No)
+                            'cfq_ment_psyep_2',    # Psychosis Episodes (1 = Yes, 0 = No)
+                            'cfq_ment_schizo_2',   # Schizophrenia (1 = Yes, 0 = No)
+                            'cfq_ment_epilepsy_2', # Epilepsy (1 = Yes, 0 = No)
+                            'cfq_ment_visual_disability_2',  # Visual Disability (1 = Yes, 0 = No)
+                            
+                            # # Behavioral measures
+                            # 'srs2sch_tscore_cog_v3', 'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2', # 'SRS_social_cognition_tscore',
+                            # 'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',# 'SRS_social_communication_tscore',
+                            # 'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2', # 'SRS_restrictive_repetitive_tscore',
+                            # 'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore',
+                            
                             # TODO: Add sleep, impulsivity, and oppositional
                             # TODO: IQ
-                            # eeg
+                            # EEG
                             'eeg_rsrio_done',
                             'eeg_rs_done',
                             'eeg_to_done',
@@ -144,90 +262,138 @@ def extract_specific_columns(isSave=True):
                             'eeg_as_done',
                             'eeg_fsp_done',
                             'eeg_mmn_done',
-                            # genetics
+                            'eeg_participant_medic',
+                            # Genetics
                             'general_health_form_genetic_testing_cnv_complete', # CVN_done  (2 = yes)
                             'gt_cnv_chr', # CHR
                             'gt_cnv_prox_bound', # START
                             'gt_cnv_dist_bound', # STOP
-                            'gt_cnv_genever', # (1 = Hg19, 2 = Hg38, 3 = Hg18)
-                            'gt_cnv_stats', # (1 = DEL, 2 = DUP, 3 = TRIP)
+                            'gt_cnv_genver', # (1 = Hg19, 2 = Hg38, 3 = Hg18)
+                            'gt_cnv_status', # (1 = DEL, 2 = DUP, 3 = TRIP)
                             'gt_snv_single_gene_test', # SNV_done
                             'gt_snv_gene_name', # gene_name
                             ]].copy()
 
-        # Map column names to their corresponding labels
-        status_map = {
-            'eeg_diagnosis___1': 'Control',
-            'eeg_diagnosis___2': 'Neurodevelopmental disorder',
-            'eeg_diagnosis___3': 'Genetic carrier',
-            'eeg_diagnosis___4': 'Unknown (under investigation, suspected)',
-            'eeg_diagnosis___5': 'Other (non-neurodevelopmental diagnosis)'
-        }
+    # Map values in fbiq_q7 (family_income) and fbiq_q1 (relation_to_proband) to their descriptive labels
+    income_mapping = {
+        1: 'Less than $20,000',
+        2: '$20,000 - $39,999',
+        3: '$40,000 - $59,999',
+        4: '$60,000 - $79,999',
+        5: '$80,000 - $99,999',
+        6: '$100,000 - $149,999',
+        7: '$150,000 - $199,999',
+        8: '$200,000 - $249,999',
+        9: '$250,000 - $399,999',
+        10: '>$400,000'
+    }
+    relation_mapping = {
+        1: 'Yourself',
+        2: 'Parent/Caregiver'
+    }
 
-        # Assign the status column, allowing for multiple statuses per row
-        def get_statuses(row):
-            statuses = []
-            for col, label in status_map.items():
-                if col in row and row[col] == 1:
-                    statuses.append(label)
-            return ', '.join(statuses) if statuses else None
+    if 'fbiq_q7' in preprocessed_df.columns:
+        preprocessed_df['fbiq_q7'] = preprocessed_df['fbiq_q7'].map(income_mapping).fillna('NA')
+    if 'fbiq_q1' in preprocessed_df.columns:
+        preprocessed_df['fbiq_q1'] = preprocessed_df['fbiq_q1'].map(relation_mapping).fillna('NA')
 
-        preprocessed_df['status'] = df.apply(get_statuses, axis=1)
+    # Map column names to their corresponding labels
+    status_map = {
+        'eeg_diagnosis___1': 'Control',
+        'eeg_diagnosis___2': 'Neurodevelopmental disorder',
+        'eeg_diagnosis___3': 'Genetic carrier',
+        'eeg_diagnosis___4': 'Unknown (under investigation, suspected)',
+        'eeg_diagnosis___5': 'Other (non-neurodevelopmental diagnosis)'
+    }
 
-        # Combine all rows per participant (record_id) into one row
-        # For each column, take the first non-null value across all rows for the same record_id
-        def combine_participant_data(group):
-            """Combine multiple rows for the same participant into one row"""
-            combined = {}
-            for col in group.columns:
-                if col == 'record_id':
-                    # For record_id, just take the first value (they should all be the same)
-                    combined[col] = group[col].iloc[0]
-                else:
-                    # Get the first non-null value for other columns
-                    non_null_values = group[col].dropna()
-                    if len(non_null_values) > 0:
-                        combined[col] = non_null_values.iloc[0]
-                    else:
-                        combined[col] = None
-            return pd.Series(combined)
+    # Assign the status column, allowing for multiple statuses per row
+    def get_statuses(row):
+        statuses = []
+        for col, label in status_map.items():
+            if col in row and row[col] == 1:
+                statuses.append(label)
+        return ', '.join(statuses) if statuses else None
+
+    preprocessed_df['status'] = df.apply(get_statuses, axis=1)
+    
+    # Update demographics columns to new names for clarity
+    column_rename_map = {
+        'eeg_participant_code': 'participant_id',
+        'eeg_birthdate_v2_v2': 'birthdate',
+        'eeget_date_v2_v2': 'test_date',
+        'eeg_age_years_testdate': 'age_at_test',
+        'eeg_sex_birth': 'sex',
+        'fbiq_q5': 'highest_education_level',
+        'fbiq_q7': 'family_income',
+        'fbiq_q1': 'relation_to_proband',
+        'highest_degree': 'family_highest_education_level',
+    }
+    preprocessed_df.rename(columns=column_rename_map, inplace=True)
+    
+    
+    return preprocessed_df
         
-        # Group by record_id and combine the data
-        preprocessed_df = preprocessed_df.groupby('record_id').apply(combine_participant_data).reset_index(drop=True)
-        
-        if (isSave):
-            # Save to new CSV file
-            preprocessed_df.to_csv(output_file, index=False)
-            
-            print(f"Successfully extracted record_id column")
-            print(f"Output saved to: {output_file}")
-            print(f"Total records: {len(preprocessed_df)}")
-            print(f"Unique record_ids: {preprocessed_df['record_id'].nunique()}")
-            
-            # Display first few records
-            print("\nFirst 10 record_ids:")
-            print(preprocessed_df.head(10))
-        else:
-            return preprocessed_df
-        
-    except FileNotFoundError:
-        print(f"Error: File not found at {input_file}")
-    except Exception as e:
-        print(f"Error processing file: {str(e)}")
 
 if __name__ == "__main__":
-   preprocessed_df = extract_specific_columns(isSave=False)
+    # Input file path
+    # input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-10-21_1139.csv"
+    input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-10-21_1209.csv"
+
+    # Output file path
+    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_medication.csv"
+    
+    # Extract specific columns
+    preprocessed_df = extract_specific_columns(input_file=input_file, output_file=output_file, isSave=True)
    
-   # Cleanup diagnosis columns
-   diagnosis_preprocessed_df = combine_diagnosis_columns(preprocessed_df)
+    # Group by record_id and combine the data first
+    grouped_preprocessed_df = preprocessed_df.groupby('record_id').apply(combine_participant_data).reset_index(drop=True)
 
-   # Cleanup ethnicity columns
+    # Cleanup diagnosis columns
+    diagnosis_preprocessed_df = combine_diagnosis_columns(grouped_preprocessed_df)
 
-   # Cleanup behavioral scores columns
+    # Cleanup ethnicity columns
+    ethnicity_preprocessed_df = combine_ethnicity_columns(diagnosis_preprocessed_df)
 
-   # Cleanup IQ
+    # Count rows where medication column is not empty, not NA, not None, as a single count
+    # Some possible medication "empty" values have "" around them in the csv, and some don't.
+    # Normalize by stripping leading/trailing spaces and any surrounding quotes, and .lower() for comparison.
+    def clean_cell(val):
+        if pd.isnull(val):
+            return None
+        val = str(val).strip().strip('"').strip("'")
+        return val.lower()
 
-   # Cleanup genetics columns
-   ## When CNV_done is 1, scores need to be 0
+    EMPTY_VALUES = {
+        '', 'na', 'n/a', 'none', 'no', 'aucun', '-', 'aucun', ' -'
+    }
+
+    eeg_medication_count = ethnicity_preprocessed_df[
+        ethnicity_preprocessed_df['eeg_participant_medic'].apply(
+            lambda x: (clean_cell(x) not in EMPTY_VALUES and clean_cell(x) not in {'aucun', ' -'})
+        )
+    ].shape[0]
+    print(f"EEG medication count: {eeg_medication_count}")
+
+    eeg_medication_voirdossier_count = ethnicity_preprocessed_df[
+        ethnicity_preprocessed_df['eeg_participant_medic'].apply(
+            lambda x: clean_cell(x) in {'voir dossier', 'yes see files'}
+        )
+    ].shape[0]
+    print(f"EEG -voir dossier- count: {eeg_medication_voirdossier_count}")
+
+    # Total participant count
+    participant_count = ethnicity_preprocessed_df['record_id'].nunique()
+    print(f"Total participant count: {participant_count}")
+
+    # Cleanup behavioral scores columns
+    # behavioral_preprocessed_df = clean_behavioral_scores(ethnicity_preprocessed_df)
+    
+    # Cleanup IQ
+
+    # Cleanup genetics columns
+    ## When CNV_done is 1, scores need to be 0
+
+    # Save output to CSV
+    ethnicity_preprocessed_df.to_csv(output_file, index=False)
 
 
