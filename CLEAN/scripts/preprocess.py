@@ -94,6 +94,7 @@ def combine_ethnicity_columns(df):
     """
     Combine ethnicity checkbox columns into a single comma-separated label column
     and drop the original checkbox columns.
+    Fix: Don't use row.get/col in row, but use explicit column access.
     """
 
     ethnicity_label_map = {
@@ -112,11 +113,16 @@ def combine_ethnicity_columns(df):
         'Other_ethnicity': 'fbiq_q9___13',
     }
 
+    # Make sure all relevant columns are present
+    for col in ethnicity_label_map.values():
+        if col not in df.columns:
+            df[col] = pd.NA
+
     def get_ethnicities(row):
         labels = []
         for label, col in ethnicity_label_map.items():
-            if col in row and pd.notnull(row[col]):
-                val = row[col]
+            val = row[col]
+            if pd.notnull(val):
                 try:
                     is_checked = int(val) == 1
                 except (ValueError, TypeError):
@@ -164,7 +170,7 @@ def clean_behavioral_scores(df_original):
 
     cols_to_drop = [
         'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2',
-        'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2',
+        'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2',
         'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
         'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore'
@@ -175,12 +181,12 @@ def clean_behavioral_scores(df_original):
 
     return df
 
-def extract_specific_columns(input_file, output_file, isSave=True):
+def extract_specific_columns(input_file):
     """
     Extract the record_id column from the Q1K database CSV file.
     """
     
-    # Read the CSV file
+    # Read the CSV files
     df = pd.read_csv(input_file)
     
     # Extract columns from Q1K Database
@@ -242,12 +248,6 @@ def extract_specific_columns(input_file, output_file, isSave=True):
                             'cfq_ment_epilepsy_2', # Epilepsy (1 = Yes, 0 = No)
                             'cfq_ment_visual_disability_2',  # Visual Disability (1 = Yes, 0 = No)
                             
-                            # # Behavioral measures
-                            # 'srs2sch_tscore_cog_v3', 'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2', # 'SRS_social_cognition_tscore',
-                            # 'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',# 'SRS_social_communication_tscore',
-                            # 'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2', # 'SRS_restrictive_repetitive_tscore',
-                            # 'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore',
-                            
                             # TODO: Add sleep, impulsivity, and oppositional
                             # TODO: IQ
                             # EEG
@@ -263,6 +263,7 @@ def extract_specific_columns(input_file, output_file, isSave=True):
                             'eeg_fsp_done',
                             'eeg_mmn_done',
                             'eeg_participant_medic',
+                            
                             # Genetics
                             'general_health_form_genetic_testing_cnv_complete', # CVN_done  (2 = yes)
                             'gt_cnv_chr', # CHR
@@ -292,10 +293,11 @@ def extract_specific_columns(input_file, output_file, isSave=True):
         2: 'Parent/Caregiver'
     }
 
+    # Only map and replace values that are present in the mapping, leave other values (e.g., nan) untouched
     if 'fbiq_q7' in preprocessed_df.columns:
-        preprocessed_df['fbiq_q7'] = preprocessed_df['fbiq_q7'].map(income_mapping).fillna('NA')
+        preprocessed_df['fbiq_q7'] = preprocessed_df['fbiq_q7'].map(income_mapping)
     if 'fbiq_q1' in preprocessed_df.columns:
-        preprocessed_df['fbiq_q1'] = preprocessed_df['fbiq_q1'].map(relation_mapping).fillna('NA')
+        preprocessed_df['fbiq_q1'] = preprocessed_df['fbiq_q1'].map(relation_mapping)
 
     # Map column names to their corresponding labels
     status_map = {
@@ -330,70 +332,112 @@ def extract_specific_columns(input_file, output_file, isSave=True):
     }
     preprocessed_df.rename(columns=column_rename_map, inplace=True)
     
-    
     return preprocessed_df
+
+def merge_beh_iq_data(preprocessed_df, beh_iq_file):
+    """
+    Merge the beh_iq_data into the preprocessed_df.
+    """
+    beh_iq_df = pd.read_csv(beh_iq_file)
+
+    # Extract columns from Q1K Database
+    merged_df = beh_iq_df[[
+        'record_id',
+
+        # Behavioral measures
+        'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2', # 'SRS_social_cognition_tscore',
+        'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',# 'SRS_social_communication_tscore',
+        'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2', # 'SRS_restrictive_repetitive_tscore',
+        'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore',
         
+        # Verbal IQ
+        'wais_verbcomp_comp','wisc_vci_cps','wppsi_47_verbal_v'
+    ]].copy()
+
+    return pd.merge(preprocessed_df, merged_df, on='record_id', how='left')
+
+def merge_verbal_iq_columns(df):
+    """
+    Merge the verbal IQ columns into a single verbal_iq column.
+    There should be no overlapping values: only one of these columns
+    should be non-null per row, but we pick the first non-null in wais_verbcomp_comp,
+    then wisc_vci_cps, then wppsi_47_verbal_v.
+    Drops the original three columns after merging.
+    """
+    df = df.copy()
+    verbal_iq_cols = ['wais_verbcomp_comp', 'wisc_vci_cps', 'wppsi_47_verbal_v']
+    df['verbal_iq'] = df[verbal_iq_cols].bfill(axis=1).iloc[:, 0]
+    cols_present = [col for col in verbal_iq_cols if col in df.columns]
+    if cols_present:
+        df = df.drop(columns=cols_present)
+    return df
 
 if __name__ == "__main__":
     # Input file path
     # input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-10-21_1139.csv"
     input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-10-21_1209.csv"
+    beh_iq_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-10-21_1431.csv"
 
     # Output file path
-    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_medication.csv"
+    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_q1k_database_chusj.csv"
     
-    # Extract specific columns
-    preprocessed_df = extract_specific_columns(input_file=input_file, output_file=output_file, isSave=True)
+    # Extract specific columns & merge behavioral/iq scores
+    preprocessed_df = extract_specific_columns(input_file)
+    merged_df = merge_beh_iq_data(preprocessed_df, beh_iq_file)
    
     # Group by record_id and combine the data first
-    grouped_preprocessed_df = preprocessed_df.groupby('record_id').apply(combine_participant_data).reset_index(drop=True)
+    grouped_preprocessed_df = merged_df.groupby('record_id').apply(combine_participant_data).reset_index(drop=True)
 
     # Cleanup diagnosis columns
     diagnosis_preprocessed_df = combine_diagnosis_columns(grouped_preprocessed_df)
 
+    # Cleanup verbal IQ columns
+    verbal_iq_preprocessed_df = merge_verbal_iq_columns(diagnosis_preprocessed_df)
+
+    # TODO: cleanup ethnicity, family income, relation to proband
     # Cleanup ethnicity columns
-    ethnicity_preprocessed_df = combine_ethnicity_columns(diagnosis_preprocessed_df)
-
-    # Count rows where medication column is not empty, not NA, not None, as a single count
-    # Some possible medication "empty" values have "" around them in the csv, and some don't.
-    # Normalize by stripping leading/trailing spaces and any surrounding quotes, and .lower() for comparison.
-    def clean_cell(val):
-        if pd.isnull(val):
-            return None
-        val = str(val).strip().strip('"').strip("'")
-        return val.lower()
-
-    EMPTY_VALUES = {
-        '', 'na', 'n/a', 'none', 'no', 'aucun', '-', 'aucun', ' -'
-    }
-
-    eeg_medication_count = ethnicity_preprocessed_df[
-        ethnicity_preprocessed_df['eeg_participant_medic'].apply(
-            lambda x: (clean_cell(x) not in EMPTY_VALUES and clean_cell(x) not in {'aucun', ' -'})
-        )
-    ].shape[0]
-    print(f"EEG medication count: {eeg_medication_count}")
-
-    eeg_medication_voirdossier_count = ethnicity_preprocessed_df[
-        ethnicity_preprocessed_df['eeg_participant_medic'].apply(
-            lambda x: clean_cell(x) in {'voir dossier', 'yes see files'}
-        )
-    ].shape[0]
-    print(f"EEG -voir dossier- count: {eeg_medication_voirdossier_count}")
-
-    # Total participant count
-    participant_count = ethnicity_preprocessed_df['record_id'].nunique()
-    print(f"Total participant count: {participant_count}")
+    ethnicity_preprocessed_df = combine_ethnicity_columns(verbal_iq_preprocessed_df)
 
     # Cleanup behavioral scores columns
-    # behavioral_preprocessed_df = clean_behavioral_scores(ethnicity_preprocessed_df)
+    behavioral_preprocessed_df = clean_behavioral_scores(ethnicity_preprocessed_df)
     
-    # Cleanup IQ
-
     # Cleanup genetics columns
     ## When CNV_done is 1, scores need to be 0
 
+    final_df = behavioral_preprocessed_df
+
     # Save output to CSV
-    ethnicity_preprocessed_df.to_csv(output_file, index=False)
+    final_df.to_csv(output_file, index=False)
 
 
+## ARCHIVE - FOR LATER
+# # Count rows where medication column is not empty, not NA, not None, as a single count
+#     # Some possible medication "empty" values have "" around them in the csv, and some don't.
+#     # Normalize by stripping leading/trailing spaces and any surrounding quotes, and .lower() for comparison.
+#     def clean_cell(val):
+#         if pd.isnull(val):
+#             return None
+#         val = str(val).strip().strip('"').strip("'")
+#         return val.lower()
+
+#     EMPTY_VALUES = {
+#         '', 'na', 'n/a', 'none', 'no', 'aucun', '-', 'aucun', ' -'
+#     }
+
+#     eeg_medication_count = ethnicity_preprocessed_df[
+#         ethnicity_preprocessed_df['eeg_participant_medic'].apply(
+#             lambda x: (clean_cell(x) not in EMPTY_VALUES and clean_cell(x) not in {'aucun', ' -'})
+#         )
+#     ].shape[0]
+#     print(f"EEG medication count: {eeg_medication_count}")
+
+#     eeg_medication_voirdossier_count = ethnicity_preprocessed_df[
+#         ethnicity_preprocessed_df['eeg_participant_medic'].apply(
+#             lambda x: clean_cell(x) in {'voir dossier', 'yes see files'}
+#         )
+#     ].shape[0]
+#     print(f"EEG -voir dossier- count: {eeg_medication_voirdossier_count}")
+
+#     # Total participant count
+#     participant_count = ethnicity_preprocessed_df['record_id'].nunique()
+#     print(f"Total participant count: {participant_count}")
