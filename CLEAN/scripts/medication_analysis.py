@@ -10,6 +10,15 @@ def combine_participant_data(group):
         if col == 'record_id':
             # For record_id, just take the first value (they should all be the same)
             combined[col] = group[col].iloc[0]
+        elif col == 'ghf_med_med':
+            # For medication column, combine all non-null values
+            non_null_values = group[col].dropna()
+            if len(non_null_values) > 0:
+                # Convert to integers and join as comma-separated string
+                med_codes = [str(int(float(val))) for val in non_null_values]
+                combined[col] = ','.join(med_codes)
+            else:
+                combined[col] = None
         else:
             # Get the first non-null value for other columns
             non_null_values = group[col].dropna()
@@ -95,7 +104,7 @@ def combine_ethnicity_columns(df):
     """
     Combine ethnicity checkbox columns into a single comma-separated label column
     and drop the original checkbox columns.
-    Copy ethnicity values across family members (same family ID but different suffixes like _P, _F1, _M1, _S1, etc.)
+    Fix: Don't use row.get/col in row, but use explicit column access.
     """
 
     ethnicity_label_map = {
@@ -119,18 +128,6 @@ def combine_ethnicity_columns(df):
         if col not in df.columns:
             df[col] = pd.NA
 
-    def extract_family_id(participant_id):
-        """Extract family ID by removing family member suffixes (_P, _F1, _M1, _S1, etc.)"""
-        if pd.isna(participant_id):
-            return None
-        
-        # Remove common family member suffixes
-        import re
-        # Pattern matches _P, _F1, _F2, _M1, _M2, _S1, _S2, etc.
-        pattern = r'_[FMS]\d*$|_P$'
-        family_id = re.sub(pattern, '', str(participant_id))
-        return family_id
-
     def get_ethnicities(row):
         labels = []
         for label, col in ethnicity_label_map.items():
@@ -144,42 +141,7 @@ def combine_ethnicity_columns(df):
                     labels.append(label)
         return ', '.join(labels) if labels else 'None'
 
-    # First, get ethnicity values for each participant
     df['ethnicities'] = df.apply(get_ethnicities, axis=1)
-    
-    # Extract family IDs
-    df['family_id'] = df['participant_id'].apply(extract_family_id)
-    
-    # Group by family_id and copy ethnicity values across family members
-    def copy_ethnicities_across_family(group):
-        # Get all non-None ethnicity values in this family
-        family_ethnicities = group['ethnicities'].dropna()
-        family_ethnicities = family_ethnicities[family_ethnicities != 'None']
-        
-        if len(family_ethnicities) > 0:
-            # If there are multiple different ethnicity values, combine them
-            unique_ethnicities = set()
-            for eth in family_ethnicities:
-                if eth and eth != 'None':
-                    # Split by comma and add individual ethnicities
-                    for individual_eth in eth.split(', '):
-                        if individual_eth.strip():
-                            unique_ethnicities.add(individual_eth.strip())
-            
-            # Assign the combined ethnicity to all family members
-            combined_ethnicity = ', '.join(sorted(unique_ethnicities)) if unique_ethnicities else 'None'
-            group['ethnicities'] = combined_ethnicity
-        else:
-            # If no ethnicity data, keep as 'None'
-            group['ethnicities'] = 'None'
-        
-        return group
-    
-    # Apply the family ethnicity copying
-    df = df.groupby('family_id', group_keys=False).apply(copy_ethnicities_across_family)
-    
-    # Drop the temporary family_id column
-    df = df.drop(columns=['family_id'])
 
     # Drop original checkbox columns if present
     checkbox_cols = [col for col in ethnicity_label_map.values() if col in df.columns]
@@ -216,17 +178,12 @@ def clean_behavioral_scores(df_original):
         'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore']
     ].bfill(axis=1).iloc[:, 0]
 
-    df['oppositional_defiant_tscore'] = df[
-        ['oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18']
-    ].bfill(axis=1).iloc[:, 0]
-
     cols_to_drop = [
         'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2',
         'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2',
         'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
-        'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore',
-        'oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18'
+        'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore'
     ]
     cols_present = [col for col in cols_to_drop if col in df.columns]
     if cols_present:
@@ -301,16 +258,8 @@ def extract_specific_columns(input_file):
                             'cfq_ment_epilepsy_2', # Epilepsy (1 = Yes, 0 = No)
                             'cfq_ment_visual_disability_2',  # Visual Disability (1 = Yes, 0 = No)
                             
-                            # ADHD measures + sleep
-                            'oppositional_defiant_6_18z',
-                            'oppositional_defiant_probc','oppositional_defiant_6_18',
-                            'ghf_sleeping',
-
-                            # NVIQ
-                            'wais_percreas_comp',
-                            'wppsi_47_fluidr_f',
-                            'wisc_fri_cps',
-
+                            # TODO: Add sleep, impulsivity, and oppositional
+                            # TODO: IQ
                             # EEG
                             'eeg_rsrio_done',
                             'eeg_rs_done',
@@ -336,6 +285,7 @@ def extract_specific_columns(input_file):
                             'gt_snv_gene_name', # gene_name
 
                             # medication
+                            'ghf_med_med'
                             ]].copy()
 
     # Map values in fbiq_q7 (family_income) and fbiq_q1 (relation_to_proband) to their descriptive labels
@@ -435,31 +385,14 @@ def merge_verbal_iq_columns(df):
         df = df.drop(columns=cols_present)
     return df
 
-def merge_nonverbal_iq_columns(df):
-    """
-    Merge the nonverbal IQ columns into a single nonverbal_iq column.
-    There should be no overlapping values: only one of these columns
-    should be non-null per row, but we pick the first non-null in wais_verbcomp_comp,
-    then wisc_vci_cps, then wppsi_47_verbal_v.
-    Drops the original three columns after merging.
-    """
-    df = df.copy()
-    nonverbal_iq_cols = ['wais_percreas_comp', 'wppsi_47_fluidr_f', 'wisc_fri_cps']
-    df['nonverbal_iq'] = df[nonverbal_iq_cols].bfill(axis=1).iloc[:, 0]
-    cols_present = [col for col in nonverbal_iq_cols if col in df.columns]
-    if cols_present:
-        df = df.drop(columns=cols_present)
-    return df
-
 if __name__ == "__main__":
     # Input file path
-    # input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNMEDICATION_DATA_2025-10-22_1359.csv"
-    input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-10-27_1225.csv"
+    input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNMEDICATION_DATA_2025-10-22_1359.csv"
+    # input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-10-21_1209.csv"
     beh_iq_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-10-21_1431.csv"
-    bc_data_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/NeurodevelopmentAsso-ECNBCSRS_DATA_2025-10-27_1312.csv"
 
     # Output file path
-    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_q1k_database_chusj.csv"
+    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_q1k_database_MEDICATION_chusj.csv"
     
     # Extract specific columns & merge behavioral/iq scores
     preprocessed_df = extract_specific_columns(input_file)
@@ -474,20 +407,311 @@ if __name__ == "__main__":
     # Cleanup verbal IQ columns
     verbal_iq_preprocessed_df = merge_verbal_iq_columns(diagnosis_preprocessed_df)
 
-    # Cleanup nonverbal IQ columns
-    nonverbal_iq_preprocessed_df = merge_nonverbal_iq_columns(verbal_iq_preprocessed_df)
-
     # TODO: cleanup ethnicity, family income, relation to proband
     # Cleanup ethnicity columns
-    ethnicity_preprocessed_df = combine_ethnicity_columns(nonverbal_iq_preprocessed_df)
+    ethnicity_preprocessed_df = combine_ethnicity_columns(verbal_iq_preprocessed_df)
 
     # Cleanup behavioral scores columns
     behavioral_preprocessed_df = clean_behavioral_scores(ethnicity_preprocessed_df)
-
-    # Merge BC data
-    bc_data_preprocessed_df = merge_bc_data(behavioral_preprocessed_df, bc_data_file)
     
     final_df = behavioral_preprocessed_df
 
     # Save output to CSV
     final_df.to_csv(output_file, index=False)
+
+    # Medication mapping dictionary
+    medication_mapping = {
+        1187604: "Vyvanse Pill",
+        711043: "Vyvanse",
+        11253: "vitamin D",
+        42954: "Vitamin B6",
+        1187868: "Ventolin Inhalant Product",
+        1099670: "Valproic acid 250 MG Delayed Release Oral Capsule",
+        1164841: "testosterone Injectable Product",
+        358330: "Strattera",
+        9997: "spironolactone",
+        36437: "sertraline",
+        83553: "Seroquel",
+        1185344: "Ritalin Pill",
+        224917: "Ritalin",
+        211489: "risperidone 1 MG/ML Oral Solution [Risperdal]",
+        262222: "risperidone 0.5 MG Oral Tablet [Risperdal]",
+        574691: "risperidone 0.5 MG [Risperdal]",
+        332434: "risperidone 0.5 MG",
+        152318: "Risperdal",
+        966922: "polyethylene glycol 3350 236000 MG / potassium chloride 2970 MG / sodium bicarbonate 6740 MG / sodium chloride 5860 MG / sodium sulfate 22740 MG Powder for Oral Solution [Golytely]",
+        1049423: "polyethylene glycol 3350 17000 MG Powder for Oral Solution [GentleLax]",
+        393435: "omeprazole Oral Tablet",
+        4301: "omega-3 fatty acids",
+        88249: "montelukast",
+        746792: "mometasone Dry Powder Inhaler",
+        368776: "methylphenidate Oral Tablet [Ritalin]",
+        372861: "methylphenidate Oral Tablet",
+        1091186: "methylphenidate hydrochloride 36 MG [Concerta]",
+        2168846: "methylphenidate hydrochloride 20 MG [Jornay]",
+        2168841: "methylphenidate Extended Release Oral Capsule [Jornay]",
+        2270766: "methylphenidate 40 MG",
+        629684: "methylphenidate 1.67 MG/HR",
+        6901: "methylphenidate",
+        6809: "metformin",
+        329012: "melatonin 3 MG",
+        6711: "melatonin",
+        1040028: "lurasidone",
+        854829: "lisdexamfetamine dimesylate 20 MG",
+        700810: "lisdexamfetamine",
+        966171: "levothyroxine sodium 0.075 MG Oral Tablet [Synthroid]",
+        1605364: "levetiracetam 1000 MG [Elepsia]",
+        1162546: "lansoprazole Pill",
+        1170053: "Keppra Oral Liquid Product",
+        261547: "Keppra",
+        1649479: "ivabradine hydrochloride",
+        862007: "Intuniv",
+        1440934: "Hydrocortisone Topical Cream [Proctozone HC]",
+        862026: "Guanfacine 4 MG [Intuniv]",
+        40114: "guanfacine",
+        310429: "furosemide 20 MG Oral Tablet",
+        42355: "fluvoxamine",
+        2647498: "fluticasone propionate / salmeterol Dry Powder Inhaler",
+        895969: "fluticasone furoate 0.0275 MG/ACTUAT [Veramyst]",
+        1160835: "fluoxetine Oral Liquid Product",
+        93904: "fluoxetine Oral Capsule [Prozac]",
+        563783: "fluoxetine 20 MG [Prozac]",
+        4493: "fluoxetine",
+        1169793: "Flovent Inhalant Product",
+        368423: "doxylamine Oral Tablet [Unisom]",
+        1736034: "dexlansoprazole 30 MG Disintegrating Oral Tablet [Dexilant]",
+        284704: "Concerta",
+        32968: "clopidogrel",
+        884173: "clonidine hydrochloride 0.1 MG Oral Tablet",
+        892791: "clonidine hydrochloride 0.025 MG Oral Tablet",
+        998678: "clonidine 0.0125 MG/HR",
+        2599: "clonidine",
+        1163749: "clobazam Oral Product",
+        1152132: "citalopram Pill",
+        2556: "citalopram",
+        1801235: "ciclesonide Nasal Product",
+        274964: "ciclesonide",
+        967376: "cetirizine Oral Tablet [Alleroff]",
+        2649488: "cetirizine hydrochloride Oral Capsule",
+        315431: "aspirin 81 MG",
+        891136: "aspirin 31200 MG Oral Tablet",
+        1158262: "aripiprazole Pill",
+        89013: "aripiprazole",
+        1170658: "Alvesco Inhalant Product",
+        202795: "Accutane",
+        352393: "Abilify",
+        862021: "24 HR guanfacine 3 MG Extended Release Oral Tablet [Intuniv]"
+    }
+
+    # Use the processed final_df which has combined participant data
+    # Check if the column exists
+    if 'ghf_med_med' in final_df.columns and 'participant_id' in final_df.columns:
+        print("="*80)
+        print("COMPREHENSIVE MEDICATION ANALYSIS")
+        print("="*80)
+
+        # Create participant type masks using final_df
+        proband_mask = final_df['participant_id'].astype(str).str.contains(r'_P\d*$', regex=True)
+        sibling_mask = final_df['participant_id'].astype(str).str.contains(r'_S\d*$', regex=True)
+        father_mask = final_df['participant_id'].astype(str).str.contains(r'_F\d*$', regex=True)
+        mother_mask = final_df['participant_id'].astype(str).str.contains(r'_M\d*$', regex=True)
+        # Add "others" masks: anyone not matching the above types but has a participant_id
+        others_mask = (
+            (~proband_mask) &
+            (~sibling_mask) &
+            (~father_mask) &
+            (~mother_mask) &
+            final_df['participant_id'].notna()
+        )
+
+        
+        # Get participant type dataframes
+        proband_df = final_df[proband_mask]
+        sibling_df = final_df[sibling_mask]
+        father_df = final_df[father_mask]
+        mother_df = final_df[mother_mask]
+        others_df = final_df[others_mask]
+
+        # Count unique participants
+        total_participants = len(final_df)
+        proband_participants = len(proband_df)
+        sibling_participants = len(sibling_df)
+        father_participants = len(father_df)
+        mother_participants = len(mother_df)
+        others_participants = len(others_df)
+        
+        print(f"Total participants: {total_participants}")
+        print(f"Probands (_P): {proband_participants}")
+        print(f"Siblings (_S): {sibling_participants}")
+        print(f"Fathers (_F): {father_participants}")
+        print(f"Mothers (_M): {mother_participants}")
+        print(f"Others: {others_participants}")
+        print("="*80)
+        
+        # Function to parse medication data and create summary
+        def parse_medication_data(df, participant_type):
+            """Parse medication data and return summary statistics"""
+            medication_counts = {}
+            medication_participants = {}  # Track unique participants per medication
+            
+            # Get unique participants who have medications
+            participants_with_meds = set()
+            
+            for idx, row in df.iterrows():
+                med_data = row['ghf_med_med']
+                if pd.notna(med_data) and str(med_data).strip() != '':
+                    # The medication data might be comma-separated or space-separated
+                    med_string = str(med_data).strip()
+                    # Try to parse as comma-separated or space-separated values
+                    med_codes = []
+                    if ',' in med_string:
+                        med_codes = [code.strip() for code in med_string.split(',')]
+                    else:
+                        med_codes = [code.strip() for code in med_string.split()]
+                    
+                    # Get unique medication codes for this participant
+                    unique_med_codes = set()
+                    for med_code_str in med_codes:
+                        try:
+                            med_code = int(float(med_code_str))  # Handle both int and float values
+                            if med_code in medication_mapping:
+                                unique_med_codes.add(med_code)
+                        except (ValueError, TypeError):
+                            continue
+                    
+                    # Count each unique medication only once per participant
+                    participant_id = row['participant_id']
+                    if pd.notna(participant_id):
+                        participants_with_meds.add(participant_id)
+                        for med_code in unique_med_codes:
+                            med_name = medication_mapping[med_code]
+                            if med_name not in medication_participants:
+                                medication_participants[med_name] = set()
+                            medication_participants[med_name].add(participant_id)
+            
+            # Convert participant sets to counts
+            for med_name, participants in medication_participants.items():
+                medication_counts[med_name] = len(participants)
+            
+            total_with_meds = len(participants_with_meds)
+            return medication_counts, total_with_meds
+        
+        # Analyze medication data for each participant type
+        proband_meds, proband_with_meds = parse_medication_data(proband_df, "Probands")
+        sibling_meds, sibling_with_meds = parse_medication_data(sibling_df, "Siblings")
+        father_meds, father_with_meds = parse_medication_data(father_df, "Fathers")
+        mother_meds, mother_with_meds = parse_medication_data(mother_df, "Mothers")
+        others_meds, others_with_meds = parse_medication_data(others_df, "Others")
+        
+        # Get all unique medications across all participant types
+        all_medications = set()
+        all_medications.update(proband_meds.keys())
+        all_medications.update(sibling_meds.keys())
+        all_medications.update(father_meds.keys())
+        all_medications.update(mother_meds.keys())
+        all_medications.update(others_meds.keys())
+        
+        # Add all expected medications to ensure complete coverage
+        all_medications.update(medication_mapping.values())
+        all_medications = sorted(all_medications)
+        
+        # Create comprehensive summary table
+        print("\nMEDICATION SUMMARY TABLE")
+        print("="*142)
+        print(f"{'Medication':<60} {'Probands':<10} {'Siblings':<10} {'Fathers':<10} {'Mothers':<10} {'Others':<10} {'Total':<10}")
+        print("="*142)
+        
+        total_medication_usage = {}
+        
+        for med in all_medications:
+            proband_count = proband_meds.get(med, 0)
+            sibling_count = sibling_meds.get(med, 0)
+            father_count = father_meds.get(med, 0)
+            mother_count = mother_meds.get(med, 0)
+            others_count = others_meds.get(med, 0)
+            total_count = proband_count + sibling_count + father_count + mother_count + others_count
+            
+            total_medication_usage[med] = total_count
+            
+            print(f"{med:<60} {proband_count:<10} {sibling_count:<10} {father_count:<10} {mother_count:<10} {others_count:<10} {total_count:<10}")
+        
+        print("="*142)
+        print(f"{'TOTAL PARTICIPANTS WITH MEDICATIONS':<60} {proband_with_meds:<10} {sibling_with_meds:<10} {father_with_meds:<10} {mother_with_meds:<10} {others_with_meds:<10} {proband_with_meds + sibling_with_meds + father_with_meds + mother_with_meds + others_with_meds:<10}")
+        print("="*142)
+        
+        # Show top 10 most common medications
+        print("\nTOP 10 MOST COMMON MEDICATIONS (ALL PARTICIPANTS)")
+        print("="*80)
+        sorted_meds = sorted(total_medication_usage.items(), key=lambda x: x[1], reverse=True)
+        for i, (med, count) in enumerate(sorted_meds[:10], 1):
+            print(f"{i:2d}. {med:<50} {count:>3d} participants")
+        
+        # Save detailed results to file
+        output_summary_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/medication_summary_detailed.txt"
+        with open(output_summary_file, 'w') as f:
+            f.write("COMPREHENSIVE MEDICATION ANALYSIS\n")
+            f.write("="*80 + "\n")
+            f.write(f"Total participants: {total_participants}\n")
+            f.write(f"Probands (_P): {proband_participants}\n")
+            f.write(f"Siblings (_S): {sibling_participants}\n")
+            f.write(f"Fathers (_F): {father_participants}\n")
+            f.write(f"Mothers (_M): {mother_participants}\n")
+            f.write(f"Others: {others_participants}\n")
+            f.write("="*80 + "\n\n")
+            
+            f.write("MEDICATION SUMMARY TABLE\n")
+            f.write("="*142 + "\n")
+            f.write(f"{'Medication':<60} {'Probands':<10} {'Siblings':<10} {'Fathers':<10} {'Mothers':<10} {'Others':<10} {'Total':<10}\n")
+            f.write("="*142 + "\n")
+            
+            for med in all_medications:
+                proband_count = proband_meds.get(med, 0)
+                sibling_count = sibling_meds.get(med, 0)
+                father_count = father_meds.get(med, 0)
+                mother_count = mother_meds.get(med, 0)
+                others_count = others_meds.get(med, 0)
+                total_count = proband_count + sibling_count + father_count + mother_count + others_count
+                
+                f.write(f"{med:<60} {proband_count:<10} {sibling_count:<10} {father_count:<10} {mother_count:<10} {others_count:<10} {total_count:<10}\n")
+            
+            f.write("="*142 + "\n")
+            f.write(f"{'TOTAL PARTICIPANTS WITH MEDICATIONS':<60} {proband_with_meds:<10} {sibling_with_meds:<10} {father_with_meds:<10} {mother_with_meds:<10} {others_with_meds:<10} {proband_with_meds + sibling_with_meds + father_with_meds + mother_with_meds + others_with_meds:<10}\n")
+            f.write("="*142 + "\n")
+        
+        print(f"\nDetailed summary saved to: {output_summary_file}")
+
+    else:
+        print("Required columns 'ghf_med_med' and/or 'participant_id' not found in final_df.")
+
+
+## ARCHIVE - FOR LATER
+# # Count rows where medication column is not empty, not NA, not None, as a single count
+#     # Some possible medication "empty" values have "" around them in the csv, and some don't.
+#     # Normalize by stripping leading/trailing spaces and any surrounding quotes, and .lower() for comparison.
+#     def clean_cell(val):
+#         if pd.isnull(val):
+#             return None
+#         val = str(val).strip().strip('"').strip("'")
+#         return val.lower()
+
+#     EMPTY_VALUES = {
+#         '', 'na', 'n/a', 'none', 'no', 'aucun', '-', 'aucun', ' -'
+#     }
+
+#     eeg_medication_count = ethnicity_preprocessed_df[
+#         ethnicity_preprocessed_df['eeg_participant_medic'].apply(
+#             lambda x: (clean_cell(x) not in EMPTY_VALUES and clean_cell(x) not in {'aucun', ' -'})
+#         )
+#     ].shape[0]
+#     print(f"EEG medication count: {eeg_medication_count}")
+
+#     eeg_medication_voirdossier_count = ethnicity_preprocessed_df[
+#         ethnicity_preprocessed_df['eeg_participant_medic'].apply(
+#             lambda x: clean_cell(x) in {'voir dossier', 'yes see files'}
+#         )
+#     ].shape[0]
+#     print(f"EEG -voir dossier- count: {eeg_medication_voirdossier_count}")
+
+#     # Total participant count
+#     participant_count = ethnicity_preprocessed_df['record_id'].nunique()
+#     print(f"Total participant count: {participant_count}")
