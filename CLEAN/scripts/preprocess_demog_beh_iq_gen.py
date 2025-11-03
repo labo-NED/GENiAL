@@ -451,15 +451,199 @@ def merge_nonverbal_iq_columns(df):
         df = df.drop(columns=cols_present)
     return df
 
+def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
+    """
+    Merge the bc_data into the df.
+    """
+    bc_data_df = pd.read_csv(bc_data_file)
+    bc_diagnosis_df = pd.read_csv(bc_diagnosis_file)
+    # --- Clean and transform bc_data_df ---
+
+    # 1. Prefix 'BC_' to record_id and participant_code
+    if 'record_id' in bc_data_df.columns:
+        bc_data_df['record_id'] = bc_data_df['record_id'].apply(lambda x: f"BC_{x}" if pd.notnull(x) else x)
+    if 'participant_code' in bc_data_df.columns:
+        bc_data_df['participant_id'] = bc_data_df['participant_code'].apply(lambda x: f"BC_{x}" if pd.notnull(x) else x)
+
+    # 2. Drop unnecessary columns
+    drop_cols = [
+        'redcap_event_name',
+        'eeg_resting_state_sequence'
+    ]
+    bc_data_df = bc_data_df.drop(columns=[col for col in drop_cols if col in bc_data_df.columns], errors='ignore')
+
+    # 3. Combine scores for SRS social communication
+    com_cols = [
+        'fs_srs_communication_tscore', 'fs1_srs_communication_tscore_v3', 'fs2_srs_communication_tscore_v4',
+        'fs2_srs_communication_tscore_v5', 'es_srs_communication_tscore', 'es1_srs_communication_tscore_v3',
+        'es2_srs_communication_tscore_v4', 'es2_srs_communication_tscore_v5'
+    ]
+    present_com_cols = [col for col in com_cols if col in bc_data_df.columns]
+    bc_data_df['SRS_social_communication_tscore'] = bc_data_df[present_com_cols].bfill(axis=1).iloc[:, 0] if present_com_cols else None
+
+    # 4. Combine scores for SRS social cognition
+    cog_cols = [
+        'fs_srs_cognition_tscore', 'fs1_srs_cognition_tscore_v3', 'fs2_srs_cognition_tscore_v4',
+        'fs2_srs_cognition_tscore_v5', 'es_srs_cognition_tscore', 'es1_srs_cognition_tscore_v3',
+        'es2_srs_cognition_tscore_v4', 'es2_srs_cognition_tscore_v5'
+    ]
+    present_cog_cols = [col for col in cog_cols if col in bc_data_df.columns]
+    bc_data_df['SRS_social_cognition_tscore'] = bc_data_df[present_cog_cols].bfill(axis=1).iloc[:, 0] if present_cog_cols else None
+
+    # 5. Combine SRS restrictive repetitive scores
+    rrb_cols = ['fs_srs_mannerisms_tscore','fs2_srs_mannerisms_tscore_v4','fs2_srs_mannerisms_tscore_v5',
+                'es_srs_mannerisms_tscore','es2_srs_mannerisms_tscore_v4','es2_srs_mannerisms_tscore_v5']
+    present_rrb_cols = [col for col in rrb_cols if col in bc_data_df.columns]
+    bc_data_df['SRS_restrictive_repetitive_tscore'] = bc_data_df[present_rrb_cols].bfill(axis=1).iloc[:, 0] if present_rrb_cols else None
+
+    # 6. Combine ADHD/Attention scores
+    adhd_cols = ['fc2_cbcl_dsm_adhd_prob_t', 'ec2_cbcl_dsm_adhd_prob_t']
+    present_adhd = [col for col in adhd_cols if col in bc_data_df.columns]
+    bc_data_df['attention_deficit_hyperactivity_tscore'] = bc_data_df[present_adhd].bfill(axis=1).iloc[:, 0] if present_adhd else None
+
+    # 7. Combine Oppositional Defiant scores
+    oppo_cols = ['fc2_cbcl_dsm_oppo_prob_t', 'ec2_cbcl_dsm_oppo_prob_t']
+    present_oppo = [col for col in oppo_cols if col in bc_data_df.columns]
+    bc_data_df['oppositional_defiant_tscore'] = bc_data_df[present_oppo].bfill(axis=1).iloc[:, 0] if present_oppo else None
+
+    # 8. Create 'ghf_sleeping' column from sleep_problem columns
+    # sleep_problem___1 = 1 -> 0
+    # sleep_problem___2 = 1 -> 1
+    # sleep_problem___3 = 1 -> 2
+    def consolidate_sleep(row):
+        if 'sleep_problem___3' in bc_data_df.columns and pd.notnull(row.get('sleep_problem___3', None)) and row.get('sleep_problem___3', 0) == 1:
+            return 2
+        if 'sleep_problem___2' in bc_data_df.columns and pd.notnull(row.get('sleep_problem___2', None)) and row.get('sleep_problem___2', 0) == 1:
+            return 1
+        if 'sleep_problem___1' in bc_data_df.columns and pd.notnull(row.get('sleep_problem___1', None)) and row.get('sleep_problem___1', 0) == 1:
+            return 0
+        return None
+    bc_data_df['ghf_sleeping'] = bc_data_df.apply(consolidate_sleep, axis=1)
+
+    # 9. Keep fsiq as is
+    if 'fsiq' in bc_data_df.columns:
+        bc_data_df['fsiq'] = bc_data_df['fsiq']
+
+    # 10. Combine PIQs to nonverbal_iq
+    piq_cols = ['piq', 'piq_2', 'piq_3', 'piq_4']
+    present_piq = [col for col in piq_cols if col in bc_data_df.columns]
+    bc_data_df['nonverbal_iq'] = bc_data_df[present_piq].bfill(axis=1).iloc[:, 0] if present_piq else None
+
+    # 11. Combine VIQs to verbal_iq
+    viq_cols = ['viq', 'viq_2']
+    present_viq = [col for col in viq_cols if col in bc_data_df.columns]
+    bc_data_df['verbal_iq'] = bc_data_df[present_viq].bfill(axis=1).iloc[:, 0] if present_viq else None
+
+    # 12. Combine faa_age and age_np as 'age_at_test'
+    age_cols = ['faa_age', 'age_np']
+    present_age = [col for col in age_cols if col in bc_data_df.columns]
+    bc_data_df['age_at_test'] = bc_data_df[present_age].bfill(axis=1).iloc[:, 0] if present_age else None
+
+    # 13. Rename gender->sex, mapping 1/2 to M/F
+    if 'gender' in bc_data_df.columns:
+        bc_data_df['sex'] = bc_data_df['gender'].replace({1: 'M', 2: 'F'}).fillna(bc_data_df['gender'])
+        bc_data_df = bc_data_df.drop(columns=['gender'])
+
+    # 14. Rename ethnicity->ethnicities
+    if 'ethnicity' in bc_data_df.columns:
+        bc_data_df.rename(columns={'ethnicity': 'ethnicities'}, inplace=True)
+
+    # 15. schooling -> highest_education_level
+    if 'schooling' in bc_data_df.columns:
+        bc_data_df.rename(columns={'schooling': 'highest_education_level'}, inplace=True)
+
+    # 16. Drop any columns not required
+    keep_cols = [
+        'record_id', 'participant_id',
+        'age_at_test', 'sex', 'ethnicities', 'highest_education_level', 
+        'nonverbal_iq', 'verbal_iq',
+        'SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore',
+        'attention_deficit_hyperactivity_tscore', 'oppositional_defiant_tscore',
+        'ghf_sleeping'
+        
+    ]
+    # Only keep columns that exist in the df
+    final_cols = [col for col in keep_cols if col in bc_data_df.columns]
+    bc_data_df = bc_data_df[final_cols]
+
+    # --- Clean and transform bc_diagnosis_df ---
+    # Only keep record_id (prefix BC_), and drop redcap_event_name
+    if 'record_id' in bc_diagnosis_df.columns:
+        bc_diagnosis_df['record_id'] = bc_diagnosis_df['record_id'].apply(lambda x: f'BC_{x}' if pd.notnull(x) else x)
+    if 'redcap_event_name' in bc_diagnosis_df.columns:
+        bc_diagnosis_df = bc_diagnosis_df.drop(columns=['redcap_event_name'])
+
+    # Build diagnosis column
+    diagnosis_mapping = [
+        ("development_delay___1", "Global developmental delay"),
+        ("development_delay___2", "Motor developmental delay"),
+        ("development_delay___3", "Language developmental delay"),
+        ("development_delay___4", "Intellectual developmental delay"),
+        ("psychiatric_troubles___1", "autism"),
+        ("psychiatric_troubles___2", "adhd"),
+        ("psychiatric_troubles___3", "specific learning disorder"),
+        ("psychiatric_troubles___4", "schizophrenia spectrum"),
+        ("psychiatric_troubles___5", "bipolar disorder"),
+        ("psychiatric_troubles___6", "depressive disorder"),
+        ("psychiatric_troubles___7", "anxiety disorder"),
+        ("psychiatric_troubles___8", "ocd"),
+        ("psychiatric_troubles___9", "sleep-wake disorder"),
+        ("psychiatric_troubles___10", "sexual dysfunction"),
+        ("psychiatric_troubles___11", "disruptive impulsive-control and conduct disorder"),
+        ("psychiatric_troubles___12", "substance-related disorder"),
+        ("psychiatric_troubles___13", "personality disorder"),
+        ("psychiatric_troubles___14", "other psychiatric condition(s)"),
+        ("psychiatric_troubles___15", "other psychiatric condition(s)"),
+        ("epilepsy___2", "epilepsy"),
+        ("epilepsy___3", "epilepsy in the past"),
+        ("epilepsy___4", "epilepsy"),
+    ]
+
+    def gather_diagnoses(row):
+        diagnoses = []
+        for col, label in diagnosis_mapping:
+            if col in row and pd.notnull(row[col]) and row[col] == 1:
+                diagnoses.append(label)
+        return "; ".join(diagnoses) if diagnoses else None
+
+    bc_diagnosis_df['diagnosis'] = bc_diagnosis_df.apply(gather_diagnoses, axis=1)
+
+    # Rename kinship to relation_to_proband
+    if 'kinship' in bc_diagnosis_df.columns:
+        bc_diagnosis_df.rename(columns={'kinship': 'relation_to_proband'}, inplace=True)
+
+    # Retain only required columns: record_id, diagnosis, relation_to_proband
+    needed_cols = ['record_id', 'diagnosis', 'relation_to_proband']
+    bc_diagnosis_df = bc_diagnosis_df[[col for col in needed_cols if col in bc_diagnosis_df.columns]]
+
+    # Merge bc_data_df and bc_diagnosis_df
+    merged_df = pd.merge(bc_data_df, bc_diagnosis_df, on='record_id', how='left')
+
+    # Compress merged_df so there is only 1 row per record_id by grouping and aggregating using 'first'
+    merged_df = merged_df.groupby('record_id', as_index=False).first()
+
+    # Append the new data from merged_df to df, matching column names and leaving blank where no column match
+    # Get all columns from both DataFrames
+    all_cols = sorted(set(df.columns) | set(merged_df.columns))
+    
+    # Reindex both dfs to have all columns, filling with NaN where missing
+    df_aligned = df.reindex(columns=all_cols)
+    merged_df_aligned = merged_df.reindex(columns=all_cols)
+    
+    # Concatenate both DataFrames
+    return pd.concat([df_aligned, merged_df_aligned], ignore_index=True)
+
 if __name__ == "__main__":
     # Input file path
     # input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNMEDICATION_DATA_2025-10-22_1359.csv"
     input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-10-27_1225.csv"
     beh_iq_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-10-21_1431.csv"
-    bc_data_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/NeurodevelopmentAsso-ECNBCSRS_DATA_2025-10-27_1312.csv"
+    bc_data_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-10-29_1315.csv"
+    bc_diagnosis_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-Diagnosis_DATA_2025-10-29_1333.csv"
+    bc_genetic_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-GeneticdataBC_DATA_2025-10-29_1333.csv"
 
     # Output file path
-    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_q1k_database_chusj.csv"
+    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA.csv"
     
     # Extract specific columns & merge behavioral/iq scores
     preprocessed_df = extract_specific_columns(input_file)
@@ -485,9 +669,60 @@ if __name__ == "__main__":
     behavioral_preprocessed_df = clean_behavioral_scores(ethnicity_preprocessed_df)
 
     # Merge BC data
-    bc_data_preprocessed_df = merge_bc_data(behavioral_preprocessed_df, bc_data_file)
+    bc_data_preprocessed_df = merge_bc_data(behavioral_preprocessed_df, bc_data_file, bc_diagnosis_file)
+
+    # Keep only participants with 3 SRS columns not empty
+    behavioral_cols = ['SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore']
+    only_full_behavior_df = bc_data_preprocessed_df.dropna(subset=behavioral_cols, how='any')
     
-    final_df = behavioral_preprocessed_df
+    final_df = only_full_behavior_df
+
+    # Reorder columns according to the specified output order
+    final_column_order = [
+        "participant_id",
+        "record_id",
+        "relation_to_proband",
+        "sex",
+        "test_date",
+        "birthdate",
+        "age_at_test",
+        "status",
+        "diagnosis",
+        "ethnicities",
+        "family_income",
+        "highest_education_level",
+        "SRS_restrictive_repetitive_tscore",
+        "SRS_social_cognition_tscore",
+        "SRS_social_communication_tscore",
+        "oppositional_defiant_tscore",
+        "attention_deficit_hyperactivity_tscore",
+        "verbal_iq",
+        "nonverbal_iq",
+        "eeg_aep_done",
+        "eeg_as_done",
+        "eeg_fsp_done",
+        "eeg_go_done",
+        "eeg_mmn_done",
+        "eeg_nsp_done",
+        "eeg_participant_medic",
+        "eeg_rs_done",
+        "eeg_rsrio_done",
+        "eeg_to_done",
+        "eeg_vep_done",
+        "eeg_vs_done",
+        "general_health_form_genetic_testing_cnv_complete",
+        "ghf_sleeping",
+        "gt_cnv_chr",
+        "gt_cnv_dist_bound",
+        "gt_cnv_genver",
+        "gt_cnv_prox_bound",
+        "gt_cnv_status",
+        "gt_snv_gene_name",
+        "gt_snv_single_gene_test"
+    ]
+
+    # Keep only columns in final_column_order (if present), ignore missing ones
+    final_df = final_df[[col for col in final_column_order if col in final_df.columns]]
 
     # Save output to CSV
     final_df.to_csv(output_file, index=False)

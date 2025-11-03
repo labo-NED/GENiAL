@@ -1,7 +1,12 @@
 # Step 1
-Download from REDcap:
+Download from REDcap:  
+*Q1K*
 - ECN-BEHAVIORAL-VERBAL_IQ
-- ECN_DEM-EEG-DIA-BEH-IQ-GEN
+- ECN_DEM-EEG-DIA-BEH-IQ-GEN  
+*Brain Canada*
+- Diagnosis
+- ECN_BC_SRS_IQ
+- Genetic_data_BC
 
 # Step 2
 Save reports in `CLEAN/Redcap_reports` folder.

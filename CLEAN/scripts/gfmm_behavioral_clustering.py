@@ -6,14 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load the data
-df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_db.csv")
+df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA.csv")
 
-# Keep only participants with ASD, ASD_behavior, or ADHD
-# Use parentheses to ensure correct operator precedence with bitwise OR
-df = df[(df['ASD'] == 1) | (df['ADHD'] == 1)]
 
 # Save database as new CSV
-df.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/ASD_ADHD_GFMM_db.csv", index=False)
+df.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/clustered_Q1K_BC_FULL_SRS_DATA.csv", index=False)
 
 # Define the same behavioral variables as in the k-means script
 behavioral_vars = [
@@ -21,8 +18,17 @@ behavioral_vars = [
     'SRS_social_cognition_tscore', # Social Cognition
     'SRS_social_communication_tscore', # Social Communication
     'SRS_restrictive_repetitive_tscore', # Restrictive/repetitive behaviors
-    'attention_deficit_hyperactivity_tscore' # Attention problems
+    'attention_deficit_hyperactivity_tscore', # Attention problems
+    'oppositional_defiant_tscore' # Oppositional Defiant
 ]
+
+# Ensure behavioral variables are numeric
+for col in behavioral_vars:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# Drop rows with any NaNs in the selected behavioral variables to avoid GMM errors
+complete_case_mask = df[behavioral_vars].notna().all(axis=1)
+df = df.loc[complete_case_mask].copy()
 
 # ----------------------------------------------
 # Standardize the data for Gaussian Mixture Model
@@ -120,8 +126,8 @@ print(f"  AIC: {best_k_aic}")
 print(f"  BIC: {best_k_bic}")
 
 # Use BIC as the primary criterion (commonly used for GMM)
-best_k = best_k_sil
-print(f"\nUsing K = {best_k} (based on SILHOUETTE)")
+best_k = best_k_bic
+print(f"\nUsing K = {best_k} (based on BIC)")
 
 # -------------------------------------------------
 # Final clustering with best K
@@ -170,6 +176,6 @@ print(f"  AIC: {gmm_final.aic(X):.2f}")
 print(f"  BIC: {gmm_final.bic(X):.2f}")
 
 # Save df with clusters
-df_with_clusters.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_gfmm_cluster_db.csv", index=False)
+df_with_clusters.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/clustered_GFMM_Q1K_BC_FULL_SRS_DATA.csv", index=False)
 
-print(f"\nResults saved to: /Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_gfmm_cluster_db.csv")
+print(f"\nResults saved to: Outputs/clustered_GFMM_Q1K_BC_FULL_SRS_DATA.csv")
