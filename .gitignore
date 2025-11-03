@@ -22,6 +22,7 @@ categorical_freq_output.txt
 
 FINAL_DATABASE_USED_IN_R_GMM.csv
 
+# New clean repo
 CLEAN/Outputs/*
 CLEAN/Redcap_reports/*
 CLEAN/Genetic_cnv_scores/*

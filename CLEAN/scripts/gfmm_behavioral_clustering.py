@@ -6,11 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load the data
-df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA.csv")
-
-
-# Save database as new CSV
-df.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/clustered_Q1K_BC_FULL_SRS_DATA.csv", index=False)
+df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA_NOV0325_AGE_FILTERED.csv")
 
 # Define the same behavioral variables as in the k-means script
 behavioral_vars = [
@@ -19,7 +15,8 @@ behavioral_vars = [
     'SRS_social_communication_tscore', # Social Communication
     'SRS_restrictive_repetitive_tscore', # Restrictive/repetitive behaviors
     'attention_deficit_hyperactivity_tscore', # Attention problems
-    'oppositional_defiant_tscore' # Oppositional Defiant
+    'oppositional_defiant_tscore'
+    # 'nonverbal_iq' # NVIQ
 ]
 
 # Ensure behavioral variables are numeric
