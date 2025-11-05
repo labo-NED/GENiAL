@@ -220,13 +220,22 @@ def clean_behavioral_scores(df_original):
         ['oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18']
     ].bfill(axis=1).iloc[:, 0]
 
+    df['anxious_depressed_tscore'] = df[
+        ['i_anxious_depressed_18_59_ts','i_anxious_depressed_18_59_ts_2','i_anxious_depressed_18_59_ts_3','i_anxious_depressed_18_59_ts_4',
+        'anxious_depressed_2w', 'anxious_depressed_2w_2','cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
+        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t']
+    ].bfill(axis=1).iloc[:, 0]
+
     cols_to_drop = [
         'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2',
         'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2',
         'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
         'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore',
-        'oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18'
+        'oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18',
+        'i_anxious_depressed_18_59_ts','i_anxious_depressed_18_59_ts_2','i_anxious_depressed_18_59_ts_3','i_anxious_depressed_18_59_ts_4',
+        'anxious_depressed_2w', 'anxious_depressed_2w_2', 'cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
+        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t'
     ]
     cols_present = [col for col in cols_to_drop if col in df.columns]
     if cols_present:
@@ -394,6 +403,10 @@ def extract_specific_columns(input_file):
         'highest_degree': 'family_highest_education_level',
     }
     preprocessed_df.rename(columns=column_rename_map, inplace=True)
+
+    # Recode sex column so that 2 is M and 1 is F
+    if 'sex' in preprocessed_df.columns:
+        preprocessed_df['sex'] = preprocessed_df['sex'].replace({1: 'F', 2: 'M'})
     
     return preprocessed_df
 
@@ -411,7 +424,11 @@ def merge_beh_iq_data(preprocessed_df, beh_iq_file):
         'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2', # 'SRS_social_cognition_tscore',
         'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',# 'SRS_social_communication_tscore',
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2', # 'SRS_restrictive_repetitive_tscore',
-        'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore',
+        'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 
+        'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore'
+        'i_anxious_depressed_18_59_ts','i_anxious_depressed_18_59_ts_2','i_anxious_depressed_18_59_ts_3','i_anxious_depressed_18_59_ts_4',
+        'anxious_depressed_2w', 'anxious_depressed_2w_2', 'cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
+        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t', # Anxious/depressed tscores
         
         # Verbal IQ
         'wais_verbcomp_comp','wisc_vci_cps','wppsi_47_verbal_v'
@@ -506,6 +523,13 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
     present_oppo = [col for col in oppo_cols if col in bc_data_df.columns]
     bc_data_df['oppositional_defiant_tscore'] = bc_data_df[present_oppo].bfill(axis=1).iloc[:, 0] if present_oppo else None
 
+    # Combine Anxious/depressed scores
+    anx_depr_cols = ['cbcl_anxious_depressed_ts','fc_cbcl_anxious_depr_t_v3','fc_cbcl_anxious_depr_t_v4',
+                      'fc2_cbcl_anxious_depr_t_v5','faa_aseba_anx_depr_scale_t','eaa_aseba_anx_depr_scale_t','ec_cbcl_anxious_depr_t_v3',
+                      'ec_cbcl_anxious_depr_t_v4','ec2_cbcl_anxious_depr_t_v5']
+    present_anxdep = [col for col in anx_depr_cols if col in bc_data_df.columns]
+    bc_data_df['anxious_depressed_tscore'] = bc_data_df[anx_depr_cols].bfill(axis=1).iloc[:, 0] if present_anxdep else None
+
     # 8. Create 'ghf_sleeping' column from sleep_problem columns
     # sleep_problem___1 = 1 -> 0
     # sleep_problem___2 = 1 -> 1
@@ -534,10 +558,15 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
     present_viq = [col for col in viq_cols if col in bc_data_df.columns]
     bc_data_df['verbal_iq'] = bc_data_df[present_viq].bfill(axis=1).iloc[:, 0] if present_viq else None
 
-    # 12. Combine faa_age and age_np as 'age_at_test'
-    age_cols = ['faa_age', 'age_np']
-    present_age = [col for col in age_cols if col in bc_data_df.columns]
-    bc_data_df['age_at_test'] = bc_data_df[present_age].bfill(axis=1).iloc[:, 0] if present_age else None
+    # # 12. Combine faa_age and age_np as 'age_at_test'
+    # age_cols = ['faa_age', 'age_np']
+    # present_age = [col for col in age_cols if col in bc_data_df.columns]
+    # bc_data_df['age_at_test'] = bc_data_df[present_age].bfill(axis=1).iloc[:, 0] if present_age else None
+
+    # Calculate age_at_test in years with decimal
+    bc_data_df['date_passation_eeg_1'] = pd.to_datetime(bc_data_df['date_passation_eeg_1'], errors='coerce')
+    bc_data_df['birth_date'] = pd.to_datetime(bc_data_df['birth_date'], errors='coerce')
+    bc_data_df['age_at_test'] = ((bc_data_df['date_passation_eeg_1'] - bc_data_df['birth_date']).dt.days) / 365.25
 
     # 13. Rename gender->sex, mapping 1/2 to M/F
     if 'gender' in bc_data_df.columns:
@@ -634,22 +663,25 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
     return pd.concat([df_aligned, merged_df_aligned], ignore_index=True)
 
 if __name__ == "__main__":
+    # ------------------------------------------------------------
+    # PATHS & CONTSTANTS 
+    # ------------------------------------------------------------
+    ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
+    OUTPUT_FILE_PATH = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_05_2025.csv"
+
     # Input file path
     ## Q1K
-    input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_HSJ&MHC_2025-11-04.csv"
-    beh_iq_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_HSJ&MHC_2025-11-04.csv"
+    Q1K_input_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-05_1626.csv"
+    Q1K_beh_iq_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-11-05_1624.csv"
     
     ## Brain Canada
-    bc_data_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-03_1541.csv"
-    bc_diagnosis_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-Diagnosis_DATA_2025-10-29_1333.csv"
-    bc_genetic_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-GeneticdataBC_DATA_2025-10-29_1333.csv"
-
-    # Output file path
-    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_HSJ&MHC_FULL_SRS_DATA.csv"
+    BC_data_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-05_1549.csv"
+    BC_diagnosis_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-Diagnosis_DATA_2025-11-05_1627.csv"
+    # BC_genetic_file = ""
     
     # Extract specific columns & merge behavioral/iq scores
-    preprocessed_df = extract_specific_columns(input_file)
-    merged_df = merge_beh_iq_data(preprocessed_df, beh_iq_file)
+    preprocessed_df = extract_specific_columns(Q1K_input_file)
+    merged_df = merge_beh_iq_data(preprocessed_df, Q1K_beh_iq_file)
    
     # Group by record_id and combine the data first
     grouped_preprocessed_df = merged_df.groupby('record_id').apply(combine_participant_data).reset_index(drop=True)
@@ -663,7 +695,6 @@ if __name__ == "__main__":
     # Cleanup nonverbal IQ columns
     nonverbal_iq_preprocessed_df = merge_nonverbal_iq_columns(verbal_iq_preprocessed_df)
 
-    # TODO: cleanup ethnicity, family income, relation to proband
     # Cleanup ethnicity columns
     ethnicity_preprocessed_df = combine_ethnicity_columns(nonverbal_iq_preprocessed_df)
 
@@ -671,18 +702,13 @@ if __name__ == "__main__":
     behavioral_preprocessed_df = clean_behavioral_scores(ethnicity_preprocessed_df)
 
     # Merge BC data
-    bc_data_preprocessed_df = merge_bc_data(behavioral_preprocessed_df, bc_data_file, bc_diagnosis_file)
+    bc_data_preprocessed_df = merge_bc_data(behavioral_preprocessed_df, BC_data_file, BC_diagnosis_file)
 
     # # Keep only participants with 3 SRS columns not empty
     # behavioral_cols = ['SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore']
     # only_full_behavior_df = bc_data_preprocessed_df.dropna(subset=behavioral_cols, how='any')
     
     final_df = bc_data_preprocessed_df # only_full_behavior_df
-
-    # count number of participants with age_at_test not empty
-    age_at_test_mask = final_df['age_at_test'].notna()
-    num_participants_with_age = age_at_test_mask.sum()
-    print(f"Number of participants with age_at_test not empty: {num_participants_with_age}")
 
     # Reorder columns according to the specified output order
     final_column_order = [
@@ -698,44 +724,41 @@ if __name__ == "__main__":
         "ethnicities",
         "family_income",
         "highest_education_level",
+        "eeg_rs_done",
+        "eeg_rsrio_done",
         "SRS_restrictive_repetitive_tscore",
         "SRS_social_cognition_tscore",
         "SRS_social_communication_tscore",
         "oppositional_defiant_tscore",
         "attention_deficit_hyperactivity_tscore",
         "externalizing_behavior_tscore",
+        "anxious_depressed_tscore",
         "verbal_iq",
-        "nonverbal_iq",
-        "eeg_aep_done",
-        "eeg_as_done",
-        "eeg_fsp_done",
-        "eeg_go_done",
-        "eeg_mmn_done",
-        "eeg_nsp_done",
-        "eeg_participant_medic",
-        "eeg_rs_done",
-        "eeg_rsrio_done",
-        "eeg_to_done",
-        "eeg_vep_done",
-        "eeg_vs_done",
-        "general_health_form_genetic_testing_cnv_complete",
-        "ghf_sleeping",
-        "gt_cnv_chr",
-        "gt_cnv_dist_bound",
-        "gt_cnv_genver",
-        "gt_cnv_prox_bound",
-        "gt_cnv_status",
-        "gt_snv_gene_name",
-        "gt_snv_single_gene_test"
+        "nonverbal_iq"
+        # "eeg_aep_done",
+        # "eeg_as_done",
+        # "eeg_fsp_done",
+        # "eeg_go_done",
+        # "eeg_mmn_done",
+        # "eeg_nsp_done",
+        # "eeg_participant_medic",
+        
+        # "eeg_to_done",
+        # "eeg_vep_done",
+        # "eeg_vs_done",
+        # "general_health_form_genetic_testing_cnv_complete",
+        # "ghf_sleeping",
+        # "gt_cnv_chr",
+        # "gt_cnv_dist_bound",
+        # "gt_cnv_genver",
+        # "gt_cnv_prox_bound",
+        # "gt_cnv_status",
+        # "gt_snv_gene_name",
+        # "gt_snv_single_gene_test"
     ]
 
     # Keep only columns in final_column_order (if present), ignore missing ones
     final_df = final_df[[col for col in final_column_order if col in final_df.columns]]
 
-    # count number of rows with participant_id ends with _P (handle NaNs safely)
-    proband_mask = final_df['participant_id'].str.endswith('_P', na=False)
-    num_probands = proband_mask.sum()
-    print(f"Number of probands: {num_probands}")
-
     # Save output to CSV
-    final_df.to_csv(output_file, index=False)
+    final_df.to_csv(OUTPUT_FILE_PATH, index=False)

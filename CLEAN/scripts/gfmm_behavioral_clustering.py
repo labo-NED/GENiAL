@@ -9,39 +9,37 @@ import matplotlib.pyplot as plt
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-INPUT_FILE = ROOT_DIR + "/Outputs/preprocessed_Q1K_BC_HSJ&MHC_FULL_SRS_DATA.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_GMM_Q1K_BC_FULL_SRS_HSJ&MHC_DATA.csv"
-RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_cluster_radars.png"
+INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_BC_DATA_NOV_05_2025.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_GMM_Q1K_CHU_BC_DATA_NOV_05_2025.csv"
+SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_BC_DATA_NOV_05_2025_silhouette_scores.png"
+RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_BC_DATA_NOV_05_2025_cluster_radars.png"
 
 BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
-    'attention_deficit_hyperactivity_tscore',
-    'oppositional_defiant_tscore',
-    'nonverbal_iq'
-    # 'verbal_iq'
+    # 'attention_deficit_hyperactivity_tscore',
+    # 'oppositional_defiant_tscore',
+    'nonverbal_iq',
+    'verbal_iq'
     # 'ghf_sleeping'
 ]
 pretty_labels = {
     'SRS_social_cognition_tscore': 'Social Cognition',
     'SRS_social_communication_tscore': 'Social Communication',
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    'attention_deficit_hyperactivity_tscore': 'ADHD',
-    'oppositional_defiant_tscore': 'Oppositional',
-    'nonverbal_iq': 'NVIQ'
-    # 'verbal_iq': 'VIQ'
+    # 'attention_deficit_hyperactivity_tscore': 'ADHD',
+    # 'oppositional_defiant_tscore': 'Oppositional',
+    'nonverbal_iq': 'NVIQ',
+    'verbal_iq': 'VIQ'
     # 'ghf_sleeping': 'Sleeping'
 }
 
 # Load the data
 df = pd.read_csv(INPUT_FILE)
 
-# Define the same behavioral variables as in the k-means script
-
-#Keep participants with age between 5-18 inclusively
+# Keep participants with age between 5-18 inclusively
 df = df[(df['age_at_test'] >= 5) & (df['age_at_test'] < 19)]
-
 
 # # Filter participants with autism, ADHD, or ASD diagnoses (handle NaNs safely)
 # diagnosis_mask = (~df['diagnosis'].isna()) & (df['diagnosis'].str.strip().str.lower() != 'none') & (df['diagnosis'].str.strip() != '')
@@ -136,6 +134,10 @@ axes[1, 1].grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.suptitle(f"Gaussian Mixture Model: Model Selection (n={len(df)}, Complete Cases)", y=1.02)
+# Save silhouette plots
+plt.savefig(SILHOUETTE_PLOTS_FILE, dpi=300)
+print(f"Saved silhouette plots: {SILHOUETTE_PLOTS_FILE}")
+
 plt.show()
 
 # -------------------------
@@ -151,7 +153,7 @@ print(f"  AIC: {best_k_aic}")
 print(f"  BIC: {best_k_bic}")
 
 # Use BIC as the primary criterion (commonly used for GMM)
-best_k = best_k_bic
+best_k = 4 # best_k_bic
 print(f"\nUsing K = {best_k} (based on BIC)")
 
 # -------------------------------------------------
@@ -212,10 +214,10 @@ pretty_labels = {
     'SRS_social_cognition_tscore': 'Social Cognition',
     'SRS_social_communication_tscore': 'Social Communication',
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    'attention_deficit_hyperactivity_tscore': 'ADHD',
-    # 'ghf_sleeping': 'Sleeping'
+    # 'attention_deficit_hyperactivity_tscore': 'ADHD',
+    # 'oppositional_defiant_tscore': 'Oppositional'
     'nonverbal_iq': 'NVIQ',
-    'oppositional_defiant_tscore': 'Oppositional'
+    'verbal_iq': 'VIQ'
 }
 labels = [pretty_labels[v] for v in BEHAVIORAL_VARS]
 p = len(labels)
@@ -226,7 +228,7 @@ vals = cluster_means.copy()                         # K x p (original scale from
 vmin = vals.min(axis=0); vmax = vals.max(axis=0)
 rng = np.where((vmax - vmin) == 0, 1, (vmax - vmin))
 vals_norm = (vals - vmin) / rng                # 0..1 for plotting
-radar_vals = vals_norm                         # change to vals use normal scale
+radar_vals = vals                         # change to vals_norm use normal scale
 
 # Angles for the polygon
 angles = np.linspace(0, 2*np.pi, p, endpoint=False)

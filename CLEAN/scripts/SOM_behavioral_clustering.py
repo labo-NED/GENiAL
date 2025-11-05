@@ -11,34 +11,58 @@ import os
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-INPUT_FILE = ROOT_DIR + "/Outputs/preprocessed_Q1K_BC_HSJ&MHC_FULL_SRS_DATA.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_SOM_Q1K_BC_FULL_SRS_HSJ&MHC_DATA.csv"
-RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/SOM_cluster_radars.png"
+INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_BC_DATA_NOV_05_2025.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_SOM_Q1K_CHU_BC_DATA_NOV_05_2025.csv"
+RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_BC_DATA_NOV_05_2025_cluster_radars.png"
 
 BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
-    'attention_deficit_hyperactivity_tscore',
-    'oppositional_defiant_tscore',
-    'nonverbal_iq'
-    # 'verbal_iq'
-    # 'ghf_sleeping'
+    # 'attention_deficit_hyperactivity_tscore',
+    # 'oppositional_defiant_tscore',
+    'nonverbal_iq',
+    'verbal_iq'
 ]
 pretty_labels = {
     'SRS_social_cognition_tscore': 'Social Cognition',
     'SRS_social_communication_tscore': 'Social Communication',
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    'attention_deficit_hyperactivity_tscore': 'ADHD',
-    'oppositional_defiant_tscore': 'Oppositional',
-    'nonverbal_iq': 'NVIQ'
-    # 'verbal_iq': 'VIQ'
-    # 'ghf_sleeping': 'Sleeping'
+    # 'attention_deficit_hyperactivity_tscore': 'ADHD',
+    # 'oppositional_defiant_tscore': 'Oppositional',
+    'nonverbal_iq': 'NVIQ',
+    'verbal_iq': 'VIQ'
 }
 # -------------------------
 # Load data
 # -------------------------
 df = pd.read_csv(INPUT_FILE)
+
+# --- Code diagnosis ---
+# Participants with all SRS columns present (complete SRS cases)
+all_srs_notna = df[BEHAVIORAL_VARS].notna().all(axis=1)
+
+n_total_complete = all_srs_notna.sum()
+
+# Age filters
+age_in = (df['age_at_test'] >= 5) & (df['age_at_test'] < 19)
+age_out = ~age_in
+
+# Complete SRS + in age range
+n_in_age = (all_srs_notna & age_in).sum()
+# Complete SRS + outside age range
+n_out_age = (all_srs_notna & age_out).sum()
+
+print(f"Number of participants with all SRS columns not empty: {n_total_complete}")
+print(f"Number of participants with SRS and age between 5-18 inclusively: {n_in_age}")
+print(f"Number of participants with SRS and age <5 or >=19: {n_out_age}")
+if n_total_complete != (n_in_age + n_out_age):
+    print(f"WHY? {n_total_complete} != {n_in_age} + {n_out_age} = {n_in_age + n_out_age}")
+
+# --- END - Code diagnosis ---
+
+# Keep participants with age between 5-18 inclusively
+df = df[age_in]
 
 # Ensure numeric and complete cases
 for col in BEHAVIORAL_VARS:
