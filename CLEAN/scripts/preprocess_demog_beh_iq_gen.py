@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import os
 
 # Combine all rows per participant (record_id) into one row
@@ -214,22 +213,12 @@ def clean_behavioral_scores(df_original):
     df['attention_deficit_hyperactivity_tscore'] = df[
         ['attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
         'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactfd_ts',
-        'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore',
-        'v_attention_problems_18_59_ts','v_attention_problems_18_59_ts_2',
-        'v_attention_problems_18_59_ts_3','v_attention_problems_18_59_ts_4',
-        'abcl_18_59_att_hypr_prb_tscore','abcl_18_59_att_hypr_prb_tscore_2']
+        'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore']
     ].bfill(axis=1).iloc[:, 0]
 
     df['oppositional_defiant_tscore'] = df[
         ['oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18']
     ].bfill(axis=1).iloc[:, 0]
-
-    df['externalizing_problems_tscore'] = df[
-        [ 'cbcl_1_5_ext_prob_tscore','cbcl_6_18_ext_prob_tscore',
-            'asr_18_59_ext_prob_tscore','externalizing_18_59_t_sco_ts','externalizing_18_59_t_sco_ts_2',
-            'x_externalizing_problems_6','externalizing_tscore','ix_externalizing_probles',
-            'abcl_18_59_ext_prob_tscore','abcl_18_59_ext_prob_tscore_2']
-    ].bfill(axis=1).iloc[:, 0]                           
 
     cols_to_drop = [
         'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2',
@@ -237,14 +226,7 @@ def clean_behavioral_scores(df_original):
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2',
         'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
         'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore',
-        'v_attention_problems_18_59_ts','v_attention_problems_18_59_ts_2',
-        'v_attention_problems_18_59_ts_3','v_attention_problems_18_59_ts_4',
-        'abcl_18_59_att_hypr_prb_tscore','abcl_18_59_att_hypr_prb_tscore_2',
-        'oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18',
-        'cbcl_1_5_ext_prob_tscore','cbcl_6_18_ext_prob_tscore',
-        'asr_18_59_ext_prob_tscore','externalizing_18_59_t_sco_ts','externalizing_18_59_t_sco_ts_2',
-        'x_externalizing_problems_6','externalizing_tscore','ix_externalizing_probles',
-        'abcl_18_59_ext_prob_tscore','abcl_18_59_ext_prob_tscore_2'
+        'oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18'
     ]
     cols_present = [col for col in cols_to_drop if col in df.columns]
     if cols_present:
@@ -323,15 +305,6 @@ def extract_specific_columns(input_file):
                             'oppositional_defiant_6_18z',
                             'oppositional_defiant_probc','oppositional_defiant_6_18',
                             'ghf_sleeping',
-                            'v_attention_problems_18_59_ts','v_attention_problems_18_59_ts_2',
-                            'v_attention_problems_18_59_ts_3','v_attention_problems_18_59_ts_4',
-                            'abcl_18_59_att_hypr_prb_tscore','abcl_18_59_att_hypr_prb_tscore_2',
-
-                            # externalizing problems
-                            'cbcl_1_5_ext_prob_tscore','cbcl_6_18_ext_prob_tscore',
-                            'asr_18_59_ext_prob_tscore','externalizing_18_59_t_sco_ts','externalizing_18_59_t_sco_ts_2',
-                            'x_externalizing_problems_6','externalizing_tscore','ix_externalizing_probles',
-                            'abcl_18_59_ext_prob_tscore','abcl_18_59_ext_prob_tscore_2',
 
                             # NVIQ
                             'wais_percreas_comp',
@@ -438,9 +411,8 @@ def merge_beh_iq_data(preprocessed_df, beh_iq_file):
         'srs2sch_tscore_cog_v3', 'srs2adself_tscore_cog_v2', 'srs2sch_tscore_cog_v2', 'srsps2rs_tscore_cog_v2', # 'SRS_social_cognition_tscore',
         'srsps2rs_tscore_com_v2', 'srs2sch_tscore_com_v3', 'srs2adself_tscore_com_v2', 'srs2sch_tscore_com_v2',# 'SRS_social_communication_tscore',
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2', # 'SRS_restrictive_repetitive_tscore',
-        'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 
-        'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore',
-
+        'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore',
+        
         # Verbal IQ
         'wais_verbcomp_comp','wisc_vci_cps','wppsi_47_verbal_v'
     ]].copy()
@@ -534,11 +506,6 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
     present_oppo = [col for col in oppo_cols if col in bc_data_df.columns]
     bc_data_df['oppositional_defiant_tscore'] = bc_data_df[present_oppo].bfill(axis=1).iloc[:, 0] if present_oppo else None
 
-    # Extrenalizing problems
-    externalizing_pro_cols = ['faa_aseba_externalizing_tscore','eaa_aseba_externalizing_tscore']
-    present_externalizing_pro_cols = [col for col in externalizing_pro_cols if col in bc_data_df.columns]
-    bc_data_df['externalizing_problems_tscore'] = bc_data_df[present_externalizing_pro_cols].bfill(axis=1).iloc[:, 0] if present_externalizing_pro_cols else None
-
     # 8. Create 'ghf_sleeping' column from sleep_problem columns
     # sleep_problem___1 = 1 -> 0
     # sleep_problem___2 = 1 -> 1
@@ -568,7 +535,7 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
     bc_data_df['verbal_iq'] = bc_data_df[present_viq].bfill(axis=1).iloc[:, 0] if present_viq else None
 
     # 12. Combine faa_age and age_np as 'age_at_test'
-    age_cols = ['faa_age', 'age_np', 'age_eeg']
+    age_cols = ['faa_age', 'age_np']
     present_age = [col for col in age_cols if col in bc_data_df.columns]
     bc_data_df['age_at_test'] = bc_data_df[present_age].bfill(axis=1).iloc[:, 0] if present_age else None
 
@@ -590,14 +557,10 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
         'record_id', 'participant_id',
         'age_at_test', 'sex', 'ethnicities', 'highest_education_level', 
         'nonverbal_iq', 'verbal_iq',
-        # Specify behavioral score columns to include, and replace 99/999 with np.nan
-        'SRS_social_communication_tscore', 
-        'SRS_social_cognition_tscore', 
-        'SRS_restrictive_repetitive_tscore',
-        'externalizing_problems_tscore',
-        'attention_deficit_hyperactivity_tscore', 
-        'oppositional_defiant_tscore',
-        'ghf_sleeping'  
+        'SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore',
+        'attention_deficit_hyperactivity_tscore', 'oppositional_defiant_tscore',
+        'ghf_sleeping'
+        
     ]
     # Only keep columns that exist in the df
     final_cols = [col for col in keep_cols if col in bc_data_df.columns]
@@ -609,19 +572,6 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
         bc_diagnosis_df['record_id'] = bc_diagnosis_df['record_id'].apply(lambda x: f'BC_{x}' if pd.notnull(x) else x)
     if 'redcap_event_name' in bc_diagnosis_df.columns:
         bc_diagnosis_df = bc_diagnosis_df.drop(columns=['redcap_event_name'])
-
-    # Set 99 or 999 values to NA in these columns only    # Set 99 or 999 values to NA in these columns only
-    behavioral_score_cols = [
-        'SRS_social_communication_tscore',
-        'SRS_social_cognition_tscore',
-        'SRS_restrictive_repetitive_tscore',
-        'externalizing_problems_tscore',
-        'attention_deficit_hyperactivity_tscore',
-        'oppositional_defiant_tscore'
-    ]
-    for col in behavioral_score_cols:
-        if col in bc_data_df.columns:
-            bc_data_df[col] = bc_data_df[col].replace([99, 999], np.nan)
 
     # Build diagnosis column
     diagnosis_mapping = [
@@ -685,18 +635,17 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
 
 if __name__ == "__main__":
     # Input file path
-    ## Q1K Reports
-    # input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1KDatabase-ECNMEDICATION_DATA_2025-10-22_1359.csv"
-    input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-03_1336.csv"
-    beh_iq_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-10-21_1431.csv"
-    ## Brain canada reports
+    ## Q1K
+    input_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_HSJ&MHC_2025-11-04.csv"
+    beh_iq_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_HSJ&MHC_2025-11-04.csv"
+    
+    ## Brain Canada
     bc_data_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-03_1541.csv"
     bc_diagnosis_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-Diagnosis_DATA_2025-10-29_1333.csv"
     bc_genetic_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/BrainCanada/NeurodevelopmentAsso-GeneticdataBC_DATA_2025-10-29_1333.csv"
 
     # Output file path
-    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA_NOV0325.csv"
-    output_file_age_filtered = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA_NOV0325_AGE_FILTERED.csv"
+    output_file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_HSJ&MHC_FULL_SRS_DATA.csv"
     
     # Extract specific columns & merge behavioral/iq scores
     preprocessed_df = extract_specific_columns(input_file)
@@ -714,6 +663,7 @@ if __name__ == "__main__":
     # Cleanup nonverbal IQ columns
     nonverbal_iq_preprocessed_df = merge_nonverbal_iq_columns(verbal_iq_preprocessed_df)
 
+    # TODO: cleanup ethnicity, family income, relation to proband
     # Cleanup ethnicity columns
     ethnicity_preprocessed_df = combine_ethnicity_columns(nonverbal_iq_preprocessed_df)
 
@@ -723,11 +673,16 @@ if __name__ == "__main__":
     # Merge BC data
     bc_data_preprocessed_df = merge_bc_data(behavioral_preprocessed_df, bc_data_file, bc_diagnosis_file)
 
-    # Keep only participants with 3 SRS columns not empty
-    behavioral_cols = ['SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore']
-    only_full_behavior_df = bc_data_preprocessed_df.dropna(subset=behavioral_cols, how='any')
+    # # Keep only participants with 3 SRS columns not empty
+    # behavioral_cols = ['SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore']
+    # only_full_behavior_df = bc_data_preprocessed_df.dropna(subset=behavioral_cols, how='any')
     
-    final_df = only_full_behavior_df
+    final_df = bc_data_preprocessed_df # only_full_behavior_df
+
+    # count number of participants with age_at_test not empty
+    age_at_test_mask = final_df['age_at_test'].notna()
+    num_participants_with_age = age_at_test_mask.sum()
+    print(f"Number of participants with age_at_test not empty: {num_participants_with_age}")
 
     # Reorder columns according to the specified output order
     final_column_order = [
@@ -748,7 +703,7 @@ if __name__ == "__main__":
         "SRS_social_communication_tscore",
         "oppositional_defiant_tscore",
         "attention_deficit_hyperactivity_tscore",
-        "externalizing_problems_tscore",
+        "externalizing_behavior_tscore",
         "verbal_iq",
         "nonverbal_iq",
         "eeg_aep_done",
@@ -777,21 +732,10 @@ if __name__ == "__main__":
     # Keep only columns in final_column_order (if present), ignore missing ones
     final_df = final_df[[col for col in final_column_order if col in final_df.columns]]
 
+    # count number of rows with participant_id ends with _P (handle NaNs safely)
+    proband_mask = final_df['participant_id'].str.endswith('_P', na=False)
+    num_probands = proband_mask.sum()
+    print(f"Number of probands: {num_probands}")
+
     # Save output to CSV
     final_df.to_csv(output_file, index=False)
-
-    # Save only participants with age between 5-18 inclusively
-    final_df_age_filtered = final_df[(final_df['age_at_test'] >= 5) & (final_df['age_at_test'] < 19)]
-    final_df_age_filtered.to_csv(output_file_age_filtered, index=False)
-
-    # Output a list of participant_id, record_id, and age_at_test 
-    # for participants with missing oppositional_defiant_tscore and/or externalizing_problems_tscore
-    missing_mask = final_df['oppositional_defiant_tscore'].isna() | final_df['externalizing_problems_tscore'].isna()
-    missing_participants = final_df.loc[missing_mask, ['participant_id', 'record_id', 'age_at_test']]
-    missing_participants.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/missing_oppositional_or_externalizing.csv", index=False)
-
-    # Output a list of participant_id, record_id, and age_at_test 
-    # for participants with missing verbal_iq and/or nonverbal_iq
-    missing_iq_mask = final_df['verbal_iq'].isna() | final_df['nonverbal_iq'].isna()
-    missing_iq_participants = final_df.loc[missing_iq_mask, ['participant_id', 'record_id', 'age_at_test']]
-    missing_iq_participants.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/missing_verbal_or_nonverbal_iq.csv", index=False)

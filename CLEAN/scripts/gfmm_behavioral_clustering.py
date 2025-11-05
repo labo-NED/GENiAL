@@ -5,33 +5,61 @@ from sklearn.metrics import silhouette_score
 import numpy as np
 import matplotlib.pyplot as plt
 
+# ------------------------------------------------------------
+# PATHS & CONTSTANTS 
+# ------------------------------------------------------------
+ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
+INPUT_FILE = ROOT_DIR + "/Outputs/preprocessed_Q1K_BC_HSJ&MHC_FULL_SRS_DATA.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_GMM_Q1K_BC_FULL_SRS_HSJ&MHC_DATA.csv"
+RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_cluster_radars.png"
+
+BEHAVIORAL_VARS = [
+    'SRS_social_cognition_tscore',
+    'SRS_social_communication_tscore',
+    'SRS_restrictive_repetitive_tscore',
+    'attention_deficit_hyperactivity_tscore',
+    'oppositional_defiant_tscore',
+    'nonverbal_iq'
+    # 'verbal_iq'
+    # 'ghf_sleeping'
+]
+pretty_labels = {
+    'SRS_social_cognition_tscore': 'Social Cognition',
+    'SRS_social_communication_tscore': 'Social Communication',
+    'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
+    'attention_deficit_hyperactivity_tscore': 'ADHD',
+    'oppositional_defiant_tscore': 'Oppositional',
+    'nonverbal_iq': 'NVIQ'
+    # 'verbal_iq': 'VIQ'
+    # 'ghf_sleeping': 'Sleeping'
+}
+
 # Load the data
-df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA_NOV0325_AGE_FILTERED.csv")
+df = pd.read_csv(INPUT_FILE)
 
 # Define the same behavioral variables as in the k-means script
-behavioral_vars = [
-    # 'IQ',
-    'SRS_social_cognition_tscore', # Social Cognition
-    'SRS_social_communication_tscore', # Social Communication
-    'SRS_restrictive_repetitive_tscore', # Restrictive/repetitive behaviors
-    'attention_deficit_hyperactivity_tscore', # Attention problems
-    'oppositional_defiant_tscore'
-    # 'nonverbal_iq' # NVIQ
-]
+
+#Keep participants with age between 5-18 inclusively
+df = df[(df['age_at_test'] >= 5) & (df['age_at_test'] < 19)]
+
+
+# # Filter participants with autism, ADHD, or ASD diagnoses (handle NaNs safely)
+# diagnosis_mask = (~df['diagnosis'].isna()) & (df['diagnosis'].str.strip().str.lower() != 'none') & (df['diagnosis'].str.strip() != '')
+# df = df[diagnosis_mask]
 
 # Ensure behavioral variables are numeric
-for col in behavioral_vars:
+for col in BEHAVIORAL_VARS:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 
 # Drop rows with any NaNs in the selected behavioral variables to avoid GMM errors
-complete_case_mask = df[behavioral_vars].notna().all(axis=1)
+complete_case_mask = df[BEHAVIORAL_VARS].notna().all(axis=1)
 df = df.loc[complete_case_mask].copy()
 
 # ----------------------------------------------
 # Standardize the data for Gaussian Mixture Model
 # ----------------------------------------------
 scaler = StandardScaler()
-X = scaler.fit_transform(df[behavioral_vars])
+X = scaler.fit_transform(df[BEHAVIORAL_VARS])
 
 print(f"Data shape after preprocessing: {X.shape}")
 print(f"Any NaN values remaining? {np.isnan(X).any()}")
@@ -161,7 +189,7 @@ print(f"\nCluster means (original scale):")
 cluster_means = scaler.inverse_transform(gmm_final.means_)
 for i, mean in enumerate(cluster_means):
     print(f"  Cluster {i}:")
-    for j, var in enumerate(behavioral_vars):
+    for j, var in enumerate(BEHAVIORAL_VARS):
         print(f"    {var}: {mean[j]:.2f}")
 
 # Show model parameters
@@ -172,7 +200,78 @@ print(f"  Log-likelihood: {gmm_final.score(X):.2f}")
 print(f"  AIC: {gmm_final.aic(X):.2f}")
 print(f"  BIC: {gmm_final.bic(X):.2f}")
 
-# Save df with clusters
-df_with_clusters.to_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/clustered_GFMM_Q1K_BC_FULL_SRS_DATA.csv", index=False)
+# =========================
+# Radar plots per cluster
+# =========================
+import numpy as np
+import matplotlib.pyplot as plt
+from math import ceil
 
-print(f"\nResults saved to: Outputs/clustered_GFMM_Q1K_BC_FULL_SRS_DATA.csv")
+# Nice labels (order matches your vars)
+pretty_labels = {
+    'SRS_social_cognition_tscore': 'Social Cognition',
+    'SRS_social_communication_tscore': 'Social Communication',
+    'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
+    'attention_deficit_hyperactivity_tscore': 'ADHD',
+    # 'ghf_sleeping': 'Sleeping'
+    'nonverbal_iq': 'NVIQ',
+    'oppositional_defiant_tscore': 'Oppositional'
+}
+labels = [pretty_labels[v] for v in BEHAVIORAL_VARS]
+p = len(labels)
+
+# Option: normalize across clusters so all radars share a 0–1 scale
+# Comment this block if you prefer true T-score values
+vals = cluster_means.copy()                         # K x p (original scale from earlier)
+vmin = vals.min(axis=0); vmax = vals.max(axis=0)
+rng = np.where((vmax - vmin) == 0, 1, (vmax - vmin))
+vals_norm = (vals - vmin) / rng                # 0..1 for plotting
+radar_vals = vals_norm                         # change to vals use normal scale
+
+# Angles for the polygon
+angles = np.linspace(0, 2*np.pi, p, endpoint=False)
+angles = np.concatenate([angles, angles[:1]])       # close the loop
+
+# Layout
+K = vals.shape[0]
+rows, cols = ceil(K/2), 2 if K > 1 else 1
+fig = plt.figure(figsize=(5*cols, 5*rows))
+
+# Map cluster id -> size
+sizes = dict(zip(unique, counts))
+
+for k in range(K):
+    ax = plt.subplot(rows, cols, k+1, projection='polar')
+    # values for this cluster, closed polygon
+    v = radar_vals[k]
+    data = np.concatenate([v, v[:1]])
+
+    # draw outer reference polygon (pentagon outline)
+    ref = np.ones(p)
+    ref = np.concatenate([ref, ref[:1]])
+    # ax.plot(angles, ref, color='black', linewidth=2)
+    
+    # cluster polygon
+    ax.plot(angles, data, linewidth=2, color='purple')
+    ax.fill(angles, data, alpha=0.15, color='purple')
+
+    # formatting
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels, fontsize=11)
+    ax.set_yticks([])                   # cleaner look
+    # ax.set_ylim(0, 1)                   # because we normalized 0..1
+    min_T = vals.min()
+    max_T = vals.max()
+    ax.set_ylim(min_T, max_T)
+    ax.set_title(f"Cluster {k}  (n={sizes.get(k,0)})", fontsize=13, pad=14)
+
+plt.tight_layout()
+out_png = RADAR_PLOTS_FILE
+plt.savefig(out_png, dpi=300)
+plt.show()
+print(f"Saved radar plots: {out_png}")
+
+# Save df with clusters
+df_with_clusters.to_csv(OUTPUT_FILE, index=False)
+
+print(f"\nResults saved to: {OUTPUT_FILE}")

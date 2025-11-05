@@ -7,28 +7,48 @@ import matplotlib.pyplot as plt
 from minisom import MiniSom
 import os
 
-# -------------------------
-# Load data
-# -------------------------
-df = pd.read_csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/preprocessed_Q1K_BC_FULL_SRS_DATA_NOV0325_AGE_FILTERED.csv")
+# ------------------------------------------------------------
+# PATHS & CONTSTANTS 
+# ------------------------------------------------------------
+ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
+INPUT_FILE = ROOT_DIR + "/Outputs/preprocessed_Q1K_BC_HSJ&MHC_FULL_SRS_DATA.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_SOM_Q1K_BC_FULL_SRS_HSJ&MHC_DATA.csv"
+RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/SOM_cluster_radars.png"
 
-behavioral_vars = [
+BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
     'attention_deficit_hyperactivity_tscore',
-    'oppositional_defiant_tscore'
+    'oppositional_defiant_tscore',
+    'nonverbal_iq'
+    # 'verbal_iq'
+    # 'ghf_sleeping'
 ]
+pretty_labels = {
+    'SRS_social_cognition_tscore': 'Social Cognition',
+    'SRS_social_communication_tscore': 'Social Communication',
+    'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
+    'attention_deficit_hyperactivity_tscore': 'ADHD',
+    'oppositional_defiant_tscore': 'Oppositional',
+    'nonverbal_iq': 'NVIQ'
+    # 'verbal_iq': 'VIQ'
+    # 'ghf_sleeping': 'Sleeping'
+}
+# -------------------------
+# Load data
+# -------------------------
+df = pd.read_csv(INPUT_FILE)
 
 # Ensure numeric and complete cases
-for col in behavioral_vars:
+for col in BEHAVIORAL_VARS:
     df[col] = pd.to_numeric(df[col], errors='coerce')
-complete_case_mask = df[behavioral_vars].notna().all(axis=1)
+complete_case_mask = df[BEHAVIORAL_VARS].notna().all(axis=1)
 df = df.loc[complete_case_mask].copy()
 
 # Scale 0-1 for SOM
 scaler = MinMaxScaler()
-X = scaler.fit_transform(df[behavioral_vars].values)
+X = scaler.fit_transform(df[BEHAVIORAL_VARS].values)
 
 print(f"Data shape after preprocessing: {X.shape}")
 print(f"Any NaN values remaining? {np.isnan(X).any()}")
@@ -145,10 +165,10 @@ print("Participants per cluster:", dict(zip(unique, counts)))
 
 # Component planes to see what drives separation
 W = som.get_weights()  # gx x gy x p
-fig, axs = plt.subplots(1, len(behavioral_vars), figsize=(4*len(behavioral_vars), 4))
-if len(behavioral_vars) == 1:
+fig, axs = plt.subplots(1, len(BEHAVIORAL_VARS), figsize=(4*len(BEHAVIORAL_VARS), 4))
+if len(BEHAVIORAL_VARS) == 1:
     axs = [axs]
-for j, var in enumerate(behavioral_vars):
+for j, var in enumerate(BEHAVIORAL_VARS):
     plane = W[:, :, j].T
     im = axs[j].imshow(plane, origin="lower")
     axs[j].set_title(var)
@@ -170,7 +190,7 @@ cluster_means = scaler.inverse_transform(centers)
 print("\nCluster means (original scale)")
 for i in range(best_k):
     print(f"  Cluster {i}:")
-    for j, var in enumerate(behavioral_vars):
+    for j, var in enumerate(BEHAVIORAL_VARS):
         print(f"    {var}: {cluster_means[i, j]:.2f}")
 
 # =========================
@@ -180,15 +200,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import ceil
 
-# Nice labels (order matches your vars)
-pretty = {
-    'SRS_social_cognition_tscore': 'Social Cognition',
-    'SRS_social_communication_tscore': 'Social Communication',
-    'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    'attention_deficit_hyperactivity_tscore': 'ADHD',
-    'oppositional_defiant_tscore': 'Oppositional',
-}
-labels = [pretty[v] for v in behavioral_vars]
+labels = [pretty_labels[v] for v in BEHAVIORAL_VARS]
 p = len(labels)
 
 # Option: normalize across clusters so all radars share a 0–1 scale
@@ -197,7 +209,7 @@ vals = cluster_means.copy()                         # K x p (original scale from
 vmin = vals.min(axis=0); vmax = vals.max(axis=0)
 rng = np.where((vmax - vmin) == 0, 1, (vmax - vmin))
 vals_norm = (vals - vmin) / rng                # 0..1 for plotting
-radar_vals = vals                              # change to vals_norm use normal scale
+radar_vals = vals_norm                              # change to vals use absolute scale
 
 # Angles for the polygon
 angles = np.linspace(0, 2*np.pi, p, endpoint=False)
@@ -230,14 +242,14 @@ for k in range(K):
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(labels, fontsize=11)
     ax.set_yticks([])                   # cleaner look
-    # ax.set_ylim(0, 1)                   # because we normalized 0..1
-    min_T = vals.min()
-    max_T = vals.max()
-    ax.set_ylim(min_T, max_T)
+    ax.set_ylim(0, 1)                   # because we normalized 0..1
+    # min_T = vals.min()
+    # max_T = vals.max()
+    # ax.set_ylim(min_T, max_T)
     ax.set_title(f"Cluster {k}  (n={sizes.get(k,0)})", fontsize=13, pad=14)
 
 plt.tight_layout()
-out_png = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/SOM_cluster_radars.png"
+out_png = RADAR_PLOTS_FILE
 plt.savefig(out_png, dpi=300)
 plt.show()
 print(f"Saved radar plots: {out_png}")
@@ -251,7 +263,7 @@ df_out['cluster'] = sample_labels
 for k in range(best_k):
     df_out[f'cluster_{k}_prob'] = cluster_probs[:, k]
 
-out_path = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/clustered_SOM_Q1K_BC_FULL_SRS_DATA.csv"
+out_path = OUTPUT_FILE
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 df_out.to_csv(out_path, index=False)
 print(f"\nResults saved to: {out_path}")
