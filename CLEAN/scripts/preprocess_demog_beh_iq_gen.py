@@ -216,14 +216,25 @@ def clean_behavioral_scores(df_original):
         'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore']
     ].bfill(axis=1).iloc[:, 0]
 
+    df['attention_problems_tscore'] = df[
+        ['v_attention_problems_18_59_ts', 'v_attention_problems_18_59_ts_2','v_attention_problems_18_59_ts_3','v_attention_problems_18_59_ts_4',
+        'abcl_18_59_att_hypr_prb_tscore_2','abcl_18_59_att_hypr_prb_tscore',]
+    ].bfill(axis=1).iloc[:, 0]
+
     df['oppositional_defiant_tscore'] = df[
         ['oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18']
     ].bfill(axis=1).iloc[:, 0]
 
     df['anxious_depressed_tscore'] = df[
         ['i_anxious_depressed_18_59_ts','i_anxious_depressed_18_59_ts_2','i_anxious_depressed_18_59_ts_3','i_anxious_depressed_18_59_ts_4',
-        'anxious_depressed_2w', 'anxious_depressed_2w_2','cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
-        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t']
+        'anxious_depressed_2w', 'anxious_depressed_2w_2', 'cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
+        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t', 'ii_anxious_depressed_1_5_t_2']
+    ].bfill(axis=1).iloc[:, 0]
+
+    df['externalizing_tscore'] = df[
+        ['cbcl_1_5_ext_prob_tscore','cbcl_6_18_ext_prob_tscore', 'asr_18_59_ext_prob_tscore','externalizing_18_59_t_sco_ts',
+        'externalizing_18_59_t_sco_ts_2','x_externalizing_problems_6','externalizing_tscore',
+        'ix_externalizing_probles','abcl_18_59_ext_prob_tscore','abcl_18_59_ext_prob_tscore_2']
     ].bfill(axis=1).iloc[:, 0]
 
     cols_to_drop = [
@@ -232,10 +243,17 @@ def clean_behavioral_scores(df_original):
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2',
         'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 
         'attention_deficit_hyperactfd_ts', 'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore',
-        'oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18',
+        'v_attention_problems_18_59_ts', 'v_attention_problems_18_59_ts_2','v_attention_problems_18_59_ts_3','v_attention_problems_18_59_ts_4',
+        'abcl_18_59_att_hypr_prb_tscore_2','abcl_18_59_att_hypr_prb_tscore',
         'i_anxious_depressed_18_59_ts','i_anxious_depressed_18_59_ts_2','i_anxious_depressed_18_59_ts_3','i_anxious_depressed_18_59_ts_4',
         'anxious_depressed_2w', 'anxious_depressed_2w_2', 'cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
-        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t'
+        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t', 'ii_anxious_depressed_1_5_t_2',
+        'oppositional_defiant_6_18z','oppositional_defiant_probc','oppositional_defiant_6_18',
+        'anxious_depressed_2w', 'anxious_depressed_2w_2', 'cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
+        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t',
+        'cbcl_1_5_ext_prob_tscore','cbcl_6_18_ext_prob_tscore', 'asr_18_59_ext_prob_tscore','externalizing_18_59_t_sco_ts',
+        'externalizing_18_59_t_sco_ts_2','x_externalizing_problems_6','externalizing_tscore',
+        'ix_externalizing_probles','abcl_18_59_ext_prob_tscore','abcl_18_59_ext_prob_tscore_2'
     ]
     cols_present = [col for col in cols_to_drop if col in df.columns]
     if cols_present:
@@ -309,16 +327,7 @@ def extract_specific_columns(input_file):
                             'cfq_ment_schizo_2',   # Schizophrenia (1 = Yes, 0 = No)
                             'cfq_ment_epilepsy_2', # Epilepsy (1 = Yes, 0 = No)
                             'cfq_ment_visual_disability_2',  # Visual Disability (1 = Yes, 0 = No)
-                            
-                            # ADHD measures + sleep
-                            'oppositional_defiant_6_18z',
-                            'oppositional_defiant_probc','oppositional_defiant_6_18',
                             'ghf_sleeping',
-
-                            # NVIQ
-                            'wais_percreas_comp',
-                            'wppsi_47_fluidr_f',
-                            'wisc_fri_cps',
 
                             # EEG
                             'eeg_rsrio_done',
@@ -426,10 +435,22 @@ def merge_beh_iq_data(preprocessed_df, beh_iq_file):
         'srsps2rs_tscore_rrb_v2', 'srs2sch_tscore_rrb_v3', 'srs2adself_tscore_rrb_v2', 'srs2sch_tscore_rrb_v2', # 'SRS_restrictive_repetitive_tscore',
         'attention_deficit_hyperactd', 'attention_deficit_hyperactz', 'attention_deficit_hyperactfd_ts', 
         'attention_deficit_hyperactv', 'cbcl_6_18_attdef_hyp_tscore', # 'attention_deficit_hyperactivity_tscore'
+        'v_attention_problems_18_59_ts', 'v_attention_problems_18_59_ts_2','v_attention_problems_18_59_ts_3','v_attention_problems_18_59_ts_4',
+        'abcl_18_59_att_hypr_prb_tscore_2','abcl_18_59_att_hypr_prb_tscore',
         'i_anxious_depressed_18_59_ts','i_anxious_depressed_18_59_ts_2','i_anxious_depressed_18_59_ts_3','i_anxious_depressed_18_59_ts_4',
         'anxious_depressed_2w', 'anxious_depressed_2w_2', 'cbcl_6_18_anx_depr_tscore','cbcl_6_18_anx_depr_tscore_v2','cbcl_1_5_anx_depr_tscore','asr_18_59_anx_depr_tscore',
-        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t', # Anxious/depressed tscores
-        
+        'asr_18_59_anx_depr_tscore_2','i_anxious_depressed_6_12_t', 'ii_anxious_depressed_1_5_t_2', # Anxious/depressed tscores
+        'oppositional_defiant_probc','oppositional_defiant_6_18z','oppositional_defiant_6_18', # oppositional defiant tscores  
+        'cbcl_1_5_ext_prob_tscore','cbcl_6_18_ext_prob_tscore', 'asr_18_59_ext_prob_tscore','externalizing_18_59_t_sco_ts',
+        'externalizing_18_59_t_sco_ts_2','x_externalizing_problems_6','externalizing_tscore',
+        'ix_externalizing_probles','abcl_18_59_ext_prob_tscore','abcl_18_59_ext_prob_tscore_2', # externalizing tscores
+
+        # Full IQ
+        'wisc_gai_is','wppsi_47_gaisco_','wppsi_47_gaisco_2', 'wais_globalapt_comp', 'bayley_cg_gsv','bayley_cg_ae',
+
+        # NVIQ
+        'wais_percreas_comp', 'wppsi_47_fluidr_f', 'wisc_fri_cps', 'leiter3_full_iq',
+
         # Verbal IQ
         'wais_verbcomp_comp','wisc_vci_cps','wppsi_47_verbal_v'
     ]].copy()
@@ -445,7 +466,7 @@ def merge_verbal_iq_columns(df):
     Drops the original three columns after merging.
     """
     df = df.copy()
-    verbal_iq_cols = ['wais_verbcomp_comp', 'wisc_vci_cps', 'wppsi_47_verbal_v']
+    verbal_iq_cols = ['wais_verbcomp_comp','wisc_vci_cps','wppsi_47_verbal_v']
     df['verbal_iq'] = df[verbal_iq_cols].bfill(axis=1).iloc[:, 0]
     cols_present = [col for col in verbal_iq_cols if col in df.columns]
     if cols_present:
@@ -461,11 +482,28 @@ def merge_nonverbal_iq_columns(df):
     Drops the original three columns after merging.
     """
     df = df.copy()
-    nonverbal_iq_cols = ['wais_percreas_comp', 'wppsi_47_fluidr_f', 'wisc_fri_cps']
+    nonverbal_iq_cols = ['wais_percreas_comp', 'wppsi_47_fluidr_f', 'wisc_fri_cps', 'leiter3_full_iq']
     df['nonverbal_iq'] = df[nonverbal_iq_cols].bfill(axis=1).iloc[:, 0]
     cols_present = [col for col in nonverbal_iq_cols if col in df.columns]
     if cols_present:
         df = df.drop(columns=cols_present)
+
+    # Add iq_test_name column based on which test provided *the actual* nonverbal_iq value
+    def get_iq_test_name(row):
+        nv = row.get('nonverbal_iq')
+        # Check which column's value matches nonverbal_iq
+        if pd.notnull(nv):
+            if 'wais_percreas_comp' in row and pd.notnull(row['wais_percreas_comp']) and row['wais_percreas_comp'] == nv:
+                return 'WAIS-IV'
+            elif 'wppsi_47_fluidr_f' in row and pd.notnull(row['wppsi_47_fluidr_f']) and row['wppsi_47_fluidr_f'] == nv:
+                return 'WPPSI-V'
+            elif 'wisc_fri_cps' in row and pd.notnull(row['wisc_fri_cps']) and row['wisc_fri_cps'] == nv:
+                return 'WISC-V'
+            elif 'leiter3_full_iq' in row and pd.notnull(row['leiter3_full_iq']) and row['leiter3_full_iq'] == nv:
+                return 'Leiter-3'
+        return None
+    df['iq_test_name'] = df.apply(get_iq_test_name, axis=1)
+
     return df
 
 def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
@@ -667,12 +705,12 @@ if __name__ == "__main__":
     # PATHS & CONTSTANTS 
     # ------------------------------------------------------------
     ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-    OUTPUT_FILE_PATH = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_05_2025.csv"
+    OUTPUT_FILE_PATH = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_BC_DATA_NOV_07_2025.csv"
 
     # Input file path
     ## Q1K
-    Q1K_input_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-05_1626.csv"
-    Q1K_beh_iq_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-11-05_1624.csv"
+    Q1K_input_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-07_1050.csv"
+    Q1K_beh_iq_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-11-07_1050.csv"
     
     ## Brain Canada
     BC_data_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-05_1549.csv"
@@ -733,6 +771,7 @@ if __name__ == "__main__":
         "attention_deficit_hyperactivity_tscore",
         "externalizing_behavior_tscore",
         "anxious_depressed_tscore",
+        'iq_test_name',
         "verbal_iq",
         "nonverbal_iq"
         # "eeg_aep_done",
