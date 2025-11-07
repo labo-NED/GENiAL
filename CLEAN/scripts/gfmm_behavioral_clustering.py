@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # ------------------------------------------------------------
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
 INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_BC_DATA_NOV_05_2025.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_GMM_Q1K_CHU_BC_DATA_NOV_05_2025.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_GMM_Q1K_CHU_BC_DATA_NOV_05_2025.csv"
 SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_BC_DATA_NOV_05_2025_silhouette_scores.png"
 RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_BC_DATA_NOV_05_2025_cluster_radars.png"
 

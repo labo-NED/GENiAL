@@ -12,7 +12,7 @@ import os
 # ------------------------------------------------------------
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
 INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_BC_DATA_NOV_05_2025.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/clustered_SOM_Q1K_CHU_BC_DATA_NOV_05_2025.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_SOM_Q1K_CHU_BC_DATA_NOV_05_2025.csv"
 RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_BC_DATA_NOV_05_2025_cluster_radars.png"
 
 BEHAVIORAL_VARS = [
@@ -21,8 +21,8 @@ BEHAVIORAL_VARS = [
     'SRS_restrictive_repetitive_tscore',
     # 'attention_deficit_hyperactivity_tscore',
     # 'oppositional_defiant_tscore',
-    'nonverbal_iq',
-    'verbal_iq'
+    # 'nonverbal_iq'
+    # 'verbal_iq'
 ]
 pretty_labels = {
     'SRS_social_cognition_tscore': 'Social Cognition',
@@ -30,8 +30,8 @@ pretty_labels = {
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
     # 'attention_deficit_hyperactivity_tscore': 'ADHD',
     # 'oppositional_defiant_tscore': 'Oppositional',
-    'nonverbal_iq': 'NVIQ',
-    'verbal_iq': 'VIQ'
+    # 'nonverbal_iq': 'NVIQ'
+    # 'verbal_iq': 'VIQ'
 }
 # -------------------------
 # Load data
@@ -163,7 +163,7 @@ plt.tight_layout()
 plt.show()
 
 best_k_sil = list(Ks)[int(np.argmax(sil_vals))]
-best_k = 4 # best_k_sil
+best_k = 4 #best_k_sil
 print(f"Best K by silhouette: {best_k}")
 print("Silhouette curve:", [round(v, 3) for v in sil_vals])
 print("Stability ARI:", [round(v, 3) for v in stability_ari])
