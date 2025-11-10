@@ -705,7 +705,7 @@ if __name__ == "__main__":
     # PATHS & CONTSTANTS 
     # ------------------------------------------------------------
     ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-    OUTPUT_FILE_PATH = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_BC_DATA_NOV_07_2025.csv"
+    OUTPUT_FILE_PATH = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
 
     # Input file path
     ## Q1K

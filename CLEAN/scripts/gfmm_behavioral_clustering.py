@@ -9,18 +9,18 @@ import matplotlib.pyplot as plt
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_BC_DATA_NOV_07_2025.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_GMM_Q1K_CHU_BC_DATA_NOV_07_2025.csv"
-SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_BC_DATA_NOV_07_2025_silhouette_scores.png"
-RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_BC_DATA_NOV_07_2025_cluster_radars.png"
+INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_GMM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
+SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025_silhouette_scores.png"
+RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_NOV_10_20255_cluster_radars.png"
 
 BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
-    # 'attention_deficit_hyperactivity_tscore',
+    'attention_deficit_hyperactivity_tscore'
     # 'oppositional_defiant_tscore',
-    'nonverbal_iq'
+    # 'nonverbal_iq'
     # 'verbal_iq'
     # 'ghf_sleeping'
 ]
@@ -28,9 +28,9 @@ pretty_labels = {
     'SRS_social_cognition_tscore': 'Social Cognition',
     'SRS_social_communication_tscore': 'Social Communication',
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    # 'attention_deficit_hyperactivity_tscore': 'ADHD',
+    'attention_deficit_hyperactivity_tscore': 'ADHD'
     # 'oppositional_defiant_tscore': 'Oppositional',
-    'nonverbal_iq': 'NVIQ'
+    # 'nonverbal_iq': 'NVIQ'
     # 'verbal_iq': 'VIQ'
     # 'ghf_sleeping': 'Sleeping'
 }
@@ -38,8 +38,8 @@ pretty_labels = {
 # Load the data
 df = pd.read_csv(INPUT_FILE)
 
-# Keep participants with age between 5-18 inclusively
-df = df[(df['age_at_test'] >= 3) & (df['age_at_test'] < 19)]
+# Keep participants with age below 19
+df = df[df['age_at_test'] < 19]
 
 # # Filter participants with autism, ADHD, or ASD diagnoses (handle NaNs safely)
 # diagnosis_mask = (~df['diagnosis'].isna()) & (df['diagnosis'].str.strip().str.lower() != 'none') & (df['diagnosis'].str.strip() != '')
@@ -209,16 +209,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import ceil
 
-# Nice labels (order matches your vars)
-pretty_labels = {
-    'SRS_social_cognition_tscore': 'Social Cognition',
-    'SRS_social_communication_tscore': 'Social Communication',
-    'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    # 'attention_deficit_hyperactivity_tscore': 'ADHD',
-    # 'oppositional_defiant_tscore': 'Oppositional'
-    'nonverbal_iq': 'NVIQ',
-    'verbal_iq': 'VIQ'
-}
 labels = [pretty_labels[v] for v in BEHAVIORAL_VARS]
 p = len(labels)
 
