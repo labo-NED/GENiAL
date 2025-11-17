@@ -18,8 +18,8 @@ BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
-    'attention_deficit_hyperactivity_tscore'
-    # 'oppositional_defiant_tscore',
+    'attention_deficit_hyperactivity_tscore',
+    'oppositional_defiant_tscore',
     # 'nonverbal_iq'
     # 'verbal_iq'
     # 'ghf_sleeping'
@@ -28,8 +28,8 @@ pretty_labels = {
     'SRS_social_cognition_tscore': 'Social Cognition',
     'SRS_social_communication_tscore': 'Social Communication',
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    'attention_deficit_hyperactivity_tscore': 'ADHD'
-    # 'oppositional_defiant_tscore': 'Oppositional',
+    'attention_deficit_hyperactivity_tscore': 'ADHD',
+    'oppositional_defiant_tscore': 'Oppositional',
     # 'nonverbal_iq': 'NVIQ'
     # 'verbal_iq': 'VIQ'
     # 'ghf_sleeping': 'Sleeping'

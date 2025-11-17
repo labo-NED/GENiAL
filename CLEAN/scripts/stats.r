@@ -12,14 +12,8 @@ library(jmv)
 library(haven)
 
 ########################## Import dataset ############################
-# CLUSTERS WITH KMEANS (+ CONTROLS)
-# original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_cluster_db.csv")
-
-# CLUSTERS WITH KMEANS (ONLY ADHD/ASD)
-# original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_cluster_db.csv")
-
-# CLUSTER WITH GMM (ONLY ASD/ADHD)
-original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/Data/final_ASD_ADHD_gfmm_cluster_db.csv")
+# CLUSTERS WITH SOM (+ CONTROLS)
+original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv")
 
 og_dataset_copy <- original_dataset # Make a copy for preprocessing
 
@@ -27,7 +21,7 @@ og_dataset_copy <- original_dataset # Make a copy for preprocessing
 
 #### Plausibilité des scores ###
 # Check frequencies
-sink(file="RAW_freq_output.txt")
+sink(file="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/RAW_freq_output.txt")
 lapply(og_dataset_copy, sjmisc::frq)
 sink()
 sink(NULL) # Disable active sink
@@ -55,13 +49,13 @@ og_dataset_copy$highest_education_level_recoded <- dplyr::case_when(
     "Some high school", 
     "Special education",
     "Elementary school or less") ~ "other",
-  og_dataset_copy$highest_education_level == "" ~ NA_character_,
-  TRUE ~ og_dataset_copy$highest_education_level
+  is.na(og_dataset_copy$highest_education_level) | og_dataset_copy$highest_education_level == "" ~ NA_character_,
+  TRUE ~ as.character(og_dataset_copy$highest_education_level)
 )
 og_dataset_copy$highest_education_level_recoded <- factor(og_dataset_copy$highest_education_level_recoded)
 
 # Check frequencies
-sink(file="RAW_freq_output.txt")
+sink(file="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/RAW_freq_output.txt")
 lapply(og_dataset_copy, sjmisc::frq)
 sink()
 sink(NULL) # Disable active sink
@@ -81,10 +75,9 @@ og_dataset_copy$family_ethnicity_recoded <- dplyr::case_when(
   og_dataset_copy$family_ethnicity %in% c("Algérie", "Arab", "Moyen-Orient", "West_Asian") ~ "Middle Eastern / West Asian",
   og_dataset_copy$family_ethnicity %in% c("Other_ethnicity", "White_Caucasian, Other_ethnicity") ~ "Other / Mixed",
   og_dataset_copy$family_ethnicity %in% c("Unknown", "") ~ "Unknown",
-  og_dataset_copy$family_ethnicity == "" ~ NA_character_,
+  is.na(og_dataset_copy$family_ethnicity) | og_dataset_copy$family_ethnicity == "" ~ NA_character_,
   TRUE ~ og_dataset_copy$family_ethnicity
 )
-
 og_dataset_copy$family_ethnicity_recoded <- factor(og_dataset_copy$family_ethnicity_recoded)
 
 # Check frequencies
@@ -97,7 +90,7 @@ sink(NULL) # Disable active sink
 og_dataset_copy$sex <- factor(og_dataset_copy$sex)
 
 # Save
-write.csv(og_dataset_copy, file = "FINAL_DATABASE_USED_IN_R_GMM.csv", row.names = FALSE)
+write.csv(og_dataset_copy, file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/FINAL_DATABASE_USED_IN_R_SOM.csv", row.names = FALSE)
 
 ################### Basic Stats ########################
 
@@ -118,86 +111,38 @@ sjmisc::frq(og_dataset_copy$family_ethnicity_recoded)
 # Analysis - highest_education_level_recoded
 sjmisc::frq(og_dataset_copy$highest_education_level_recoded)
 
-################# Variability in numerical data ######################
+################# Variability/range in numerical data ######################
 
 # Age
-min_age <- min(og_dataset_copy$age, na.rm = TRUE) # 5
-mean_age_cluster0 <- mean(
-  og_dataset_copy$age[og_dataset_copy$cluster == 0],
-  na.rm = TRUE
-) # 10.75
-mean_age_cluster1 <- mean(
-  og_dataset_copy$age[og_dataset_copy$cluster == 1],
-  na.rm = TRUE
-) # 10.31
-max_age <- max(og_dataset_copy$age, na.rm = TRUE) # 18
+min_age <- min(og_dataset_copy$age_at_test, na.rm = TRUE) # 5
+max_age <- max(og_dataset_copy$age_at_test, na.rm = TRUE) # 18
 
 # IQ
-min_iq <- min(og_dataset_copy$IQ, na.rm = TRUE) # 30
-mean_iq_cluster0 <- mean(
-  og_dataset_copy$IQ[og_dataset_copy$cluster == 0],
-  na.rm = TRUE
-) # 96
-mean_iq_cluster1 <- mean(
-  og_dataset_copy$IQ[og_dataset_copy$cluster == 1],
-  na.rm = TRUE
-) # 82
-max_iq <- max(og_dataset_copy$IQ, na.rm = TRUE) # 132
+min_iq <- min(og_dataset_copy$nonverbal_iq, na.rm = TRUE) # 30
+max_iq <- max(og_dataset_copy$nonverbal_iq, na.rm = TRUE) # 132
 
 # Behavioral Scores
 
 # SRS Social Cognition T-score
 min_srs_social_cognition <- min(og_dataset_copy$SRS_social_cognition_tscore, na.rm = TRUE) # 39
-mean_srs_social_cognition_cluster0 <- mean(
-  og_dataset_copy$SRS_social_cognition_tscore[og_dataset_copy$cluster == 0],
-  na.rm = TRUE
-)
-mean_srs_social_cognition_cluster1 <- mean(
-  og_dataset_copy$SRS_social_cognition_tscore[og_dataset_copy$cluster == 1],
-  na.rm = TRUE
-)
 max_srs_social_cognition <- max(og_dataset_copy$SRS_social_cognition_tscore, na.rm = TRUE) # 90
 
 # SRS Social Communication T-score
 min_srs_social_communication <- min(og_dataset_copy$SRS_social_communication_tscore, na.rm = TRUE)
-mean_srs_social_communication_cluster0 <- mean(
-  og_dataset_copy$SRS_social_communication_tscore[og_dataset_copy$cluster == 0],
-  na.rm = TRUE
-)
-mean_srs_social_communication_cluster1 <- mean(
-  og_dataset_copy$SRS_social_communication_tscore[og_dataset_copy$cluster == 1],
-  na.rm = TRUE
-)
 max_srs_social_communication <- max(og_dataset_copy$SRS_social_communication_tscore, na.rm = TRUE)
 
 # SRS Restrictive Repetitive T-score
 min_srs_restrictive_repetitive <- min(og_dataset_copy$SRS_restrictive_repetitive_tscore, na.rm = TRUE)
-mean_srs_restrictive_repetitive_cluster0 <- mean(
-  og_dataset_copy$SRS_restrictive_repetitive_tscore[og_dataset_copy$cluster == 0],
-  na.rm = TRUE
-)
-mean_srs_restrictive_repetitive_cluster1 <- mean(
-  og_dataset_copy$SRS_restrictive_repetitive_tscore[og_dataset_copy$cluster == 1],
-  na.rm = TRUE
-)
 max_srs_restrictive_repetitive <- max(og_dataset_copy$SRS_restrictive_repetitive_tscore, na.rm = TRUE)
 
 # ADHD T-score
 min_adhd <- min(og_dataset_copy$attention_deficit_hyperactivity_tscore, na.rm = TRUE)
-mean_adhd_cluster0 <- mean(
-  og_dataset_copy$attention_deficit_hyperactivity_tscore[og_dataset_copy$cluster == 0],
-  na.rm = TRUE
-)
-mean_adhd_cluster1 <- mean(
-  og_dataset_copy$attention_deficit_hyperactivity_tscore[og_dataset_copy$cluster == 1],
-  na.rm = TRUE
-)
 max_adhd <- max(og_dataset_copy$attention_deficit_hyperactivity_tscore, na.rm = TRUE)
 
 ### Normality
 
 # Plot data to help visualize
-columns_to_plot <- c("age", "IQ", "SRS_restrictive_repetitive_tscore","SRS_social_communication_tscore", "SRS_social_cognition_tscore", "attention_deficit_hyperactivity_tscore")
+columns_to_plot <- c("age_at_test", "nonverbal_iq", "SRS_restrictive_repetitive_tscore","SRS_social_communication_tscore", "SRS_social_cognition_tscore", "attention_deficit_hyperactivity_tscore")
 
 # Function to create scatter plot with mean - check for outliers
 get_plot_range <- function(db, colname) {
@@ -448,122 +393,7 @@ print(emm_results$SRS_social_communication_tscore)
 print(emm_results$SRS_social_cognition_tscore)
 print(emm_results$attention_deficit_hyperactivity_tscore)
 
-# Plot a pie chart for each cluster showing the diagnostic group distribution
-# (no labels on the pie sections, only the pie and legend)
-
-# Ensure the variables are numeric (if not already)
-og_dataset_copy$ADHD <- as.numeric(og_dataset_copy$ADHD)
-og_dataset_copy$ASD <- as.numeric(og_dataset_copy$ASD)
-og_dataset_copy$ASD_behavior <- as.numeric(og_dataset_copy$ASD_behavior)
-og_dataset_copy$`No.ASD.ADHD` <- as.numeric(og_dataset_copy$`No.ASD.ADHD`)
-og_dataset_copy$cluster <- as.factor(og_dataset_copy$cluster)
-
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-
-# For each cluster, determine the diagnostic group for each participant
-diagnosis_labels <- function(row) {
-  asd <- !is.na(row["ASD"]) && row["ASD"] == 1
-  asd_behavior <- !is.na(row["ASD_behavior"]) && row["ASD_behavior"] == 1
-  adhd <- !is.na(row["ADHD"]) && row["ADHD"] == 1
-
-  if (asd && adhd) {
-    return("ASD + ADHD")
-  } else if (asd) {
-    return("ASD")
-  } else if (asd_behavior && adhd) {
-    return("ADHD + ASD behavior")
-  } else if (adhd) {
-    return("ADHD")
-  } else {
-    return("No ASD/ADHD")
-  }
-}
-
-og_dataset_copy$diagnosis_group <- apply(og_dataset_copy[, c("ASD", "ASD_behavior", "ADHD")], 1, diagnosis_labels)
-
-# Do not enforce a fixed order for diagnosis groups
-og_dataset_copy$diagnosis_group <- factor(og_dataset_copy$diagnosis_group)
-
-# Custom color palette for diagnosis groups (more distinct colors)
-diagnosis_colors <- c(
-  "ASD" = "#1976D2",              # deep blue
-  "ADHD" = "#E91E63",             # pink
-  "ASD + ADHD" = "#8E24AA",            # purple
-  "ADHD + ASD behavior" = "#BA68C8"   # light purple
-)
-
-clusters <- levels(og_dataset_copy$cluster)
-
-for (cl in clusters) {
-  cluster_data <- og_dataset_copy %>% filter(cluster == cl)
-  total_n <- nrow(cluster_data)
-  diag_counts <- cluster_data %>%
-    group_by(diagnosis_group) %>%
-    summarise(count = n(), .groups = "drop") %>%
-    mutate(perc = count / sum(count) * 100)
-
- # Ensure all diagnosis groups are present (even if count = 0)
-  diag_counts <- diag_counts %>%
-    complete(diagnosis_group = levels(og_dataset_copy$diagnosis_group), fill = list(count = 0, perc = 0))
-  # Remove groups with count == 0 so they don't get plotted as tiny slivers
-  diag_counts <- diag_counts %>% filter(count > 0)
-
-  # Plot pie chart with labels positioned outside the chart area
-  # Add labels with n (%) outside the pie slices
-
-  diag_counts <- diag_counts %>%
-    mutate(
-      label = ifelse(
-        count > 0,
-        paste0(count, " (", sprintf("%.1f", perc), "%)"),
-        ""
-      )
-    )
-
-  # Calculate cumulative proportions for label positioning
-  diag_counts <- diag_counts %>%
-    arrange(desc(diagnosis_group)) %>%
-    mutate(
-      ymax = cumsum(count),
-      ymin = c(0, head(ymax, n = -1)),
-      mid = (ymax + ymin) / 2,
-      angle = 90 - 360 * (mid / sum(count)),
-      hjust = ifelse(angle < -90, 1, 0),
-      angle = ifelse(angle < -90, angle + 180, angle)
-    )
-  pie_chart <- ggplot(diag_counts, aes(x = "", y = count, fill = diagnosis_group)) +
-    geom_col(width = 1, color = "white") +
-    coord_polar(theta = "y", start = 0) +
-    labs(
-      title = paste0("Cluster ", cl, " (n = ", total_n, ") - Diagnostic Distribution"),
-      fill = "Diagnosis"
-    ) +
-    theme_void(base_size = 16) +
-    scale_fill_manual(values = diagnosis_colors, drop = FALSE) +
-    guides(fill = guide_legend(override.aes = list(size = 6))) +
-    theme(
-      plot.title = element_text(hjust = 0, size = 12, face = "bold"),
-      legend.title = element_text(size = 12),
-      legend.text = element_text(size = 12)
-    ) +
-    geom_text(
-      data = diag_counts %>% filter(count > 0),
-      aes(
-        y = mid,
-        label = label,
-        angle = angle,
-        hjust = hjust
-      ),
-      x = 1, # position labels outside the pie
-      size = 5,
-      color = "white",
-      inherit.aes = FALSE
-    )
-
-  print(pie_chart)
-}
+4
 
 # Grouped diagnostic distribution pie charts (0_3 vs 1_2)
 og_dataset_copy$cluster_group <- factor(

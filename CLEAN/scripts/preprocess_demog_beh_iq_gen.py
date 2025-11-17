@@ -714,7 +714,7 @@ if __name__ == "__main__":
     
     ## Brain Canada
     BC_data_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-05_1549.csv"
-    BC_diagnosis_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-Diagnosis_DATA_2025-11-05_1627.csv"
+    BC_diagnosis_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNDiagnostics_DATA_2025-11-10_1614.csv"
     # BC_genetic_file = ""
     
     # Extract specific columns & merge behavioral/iq scores
@@ -741,6 +741,8 @@ if __name__ == "__main__":
 
     # Merge BC data
     bc_data_preprocessed_df = merge_bc_data(behavioral_preprocessed_df, BC_data_file, BC_diagnosis_file)
+
+    
 
     # # Keep only participants with 3 SRS columns not empty
     # behavioral_cols = ['SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore']

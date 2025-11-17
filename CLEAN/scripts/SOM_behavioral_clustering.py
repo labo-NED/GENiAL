@@ -14,23 +14,24 @@ ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
 INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
 OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
 RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025_cluster_radars.png"
+SELECTION_CURVES_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025_selection_curves.png"
 
 BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
-    'attention_deficit_hyperactivity_tscore'
+    'attention_deficit_hyperactivity_tscore',
     # 'oppositional_defiant_tscore',
-    # 'nonverbal_iq'
+    'nonverbal_iq'
     # 'verbal_iq'
 ]
 pretty_labels = {
     'SRS_social_cognition_tscore': 'Social Cognition',
     'SRS_social_communication_tscore': 'Social Communication',
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
-    'attention_deficit_hyperactivity_tscore': 'ADHD'
+    'attention_deficit_hyperactivity_tscore': 'ADHD',
     # 'oppositional_defiant_tscore': 'Oppositional',
-    # 'nonverbal_iq': 'NVIQ'
+    'nonverbal_iq': 'NVIQ'
     # 'verbal_iq': 'VIQ'
 }
 # -------------------------
@@ -160,7 +161,9 @@ plt.xlabel('K')
 plt.grid(alpha=.3)
 plt.legend()
 plt.tight_layout()
+plt.savefig(SELECTION_CURVES_FILE, dpi=300)
 plt.show()
+print(f"Saved selection curves plots: {SELECTION_CURVES_FILE}")
 
 best_k_sil = list(Ks)[int(np.argmax(sil_vals))]
 best_k = 4 #best_k_sil
