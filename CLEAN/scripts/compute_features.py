@@ -31,8 +31,9 @@ EPOCH_5S = True  # Set to True to process 5s epochs, False to skip
 
 # ------------ Paths ------------
 root_dir = '/Volumes/NED_Backup3'
-dir_2s = os.path.join(root_dir, 'COMBINED_Q1K_BC_2s', 'curated_list_for_genial')
-dir_5s = os.path.join(root_dir, 'COMBINED_Q1K_BC_5s', 'curated_list_for_genial')
+dir_2s = os.path.join(root_dir, 'COMBINED_Q1K_BC_2s', 'curated_list_for_genial_2s')
+print(dir_2s)
+dir_5s = os.path.join(root_dir, 'COMBINED_Q1K_BC_5s', 'curated_list_for_genial_5s')
 output_dir = os.path.join(root_dir, 'Q1K_BC_EEG_features')
 os.makedirs(output_dir, exist_ok=True)
 

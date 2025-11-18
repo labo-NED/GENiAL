@@ -131,10 +131,10 @@ def main():
         epilog="""
 Examples:
   # Add _2s to all files in a directory
-  python3 CLEAN/scripts/rename_eeg_files.py "/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s" "_2s"
+  python3 CLEAN/scripts/rename_eeg_files.py "/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s/curated_list_for_genial_2s" "_2s"
   
   # Add _5s to all files in a directory
-  python3 CLEAN/scripts/rename_eeg_files.py "/Volumes/NED_Backup3/COMBINED_Q1K_BC_5s" "_5s"
+  python3 CLEAN/scripts/rename_eeg_files.py "/Volumes/NED_Backup3/COMBINED_Q1K_BC_5s/curated_list_for_genial_5s" "_5s"
   
   # Add _2s to specific files listed in a text file
   python3 CLEAN/scripts/rename_eeg_files.py "/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s" "_2s" --file-list "CLEAN/file_list.txt"
