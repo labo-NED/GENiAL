@@ -102,7 +102,12 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
     # ========== EXTRACT FEATURES FROM 2S EPOCHS ==========
     if epoch_type == '2s':
         print(f'Loading 2s epochs...')
-        epochs_short = mne.io.read_epochs_eeglab(filepath)
+        try:
+            epochs_short = mne.io.read_epochs_eeglab(filepath)
+        except Exception as e:
+            print(f'Error reading 2s file {filename}: {e}')
+            continue
+
         epochs_short.info['bads'] = excluded_chans
         
         print(np.shape(epochs_short.get_data(picks='all')))
@@ -167,7 +172,12 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
     # ========== EXTRACT FEATURES FROM 5S EPOCHS ==========
     elif epoch_type == '5s':
         print(f'Loading 5s epochs...')
-        epochs_long = mne.io.read_epochs_eeglab(filepath)
+        try:
+            epochs_long = mne.io.read_epochs_eeglab(filepath)
+        except Exception as e:
+            print(f'Error reading 5s file {filename}: {e}')
+            continue
+
         epochs_long.info['bads'] = excluded_chans
         
         epoch_data = epochs_long.get_data(picks='all')[:,:n_chans] # excluding bad channels
