@@ -30,10 +30,10 @@ EPOCH_2S = True  # Set to True to process 2s epochs, False to skip
 EPOCH_5S = True  # Set to True to process 5s epochs, False to skip
 
 # ------------ Paths ------------
-root_dir = '/Volumes/NED_Backup3'
-dir_2s = os.path.join(root_dir, 'COMBINED_Q1K_BC_2s', 'curated_list_for_genial_2s')
+root_dir = '/home/emmacona/projects/def-lippes/emmacona'
+dir_2s = os.path.join(root_dir, 'COMBINED_BC_Q1K_PREPROCESSED_RS_EEG_2s')
 print(dir_2s)
-dir_5s = os.path.join(root_dir, 'COMBINED_Q1K_BC_5s', 'curated_list_for_genial_5s')
+dir_5s = os.path.join(root_dir, 'COMBINED_BC_Q1K_PREPROCESSED_RS_EEG_5s')
 output_dir = os.path.join(root_dir, 'Q1K_BC_EEG_features')
 os.makedirs(output_dir, exist_ok=True)
 
@@ -66,10 +66,10 @@ print()
 
 # ------------ Common Params ------------
 Fs = 1000
-n_chans = 128
+n_chans = 108
 n_cores = 64  # DEPENDS ON BATCH SCRIPT
 maxscale = 40  # maximum scale for MSE
-excluded_chans = []  # w/ ref
+excluded_chans = ['48','119','43','49','56','63','68','73','81','88','94','99','107','113','120','125','126','127','128','17','129']  # w/ ref
 included_chans = [str(idx) for idx in range(1, 130) if str(idx) not in excluded_chans]
 
 # ---------- CONSTANTS ----------

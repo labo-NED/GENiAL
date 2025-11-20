@@ -11,7 +11,7 @@ import numpy as np
 from pathlib import Path
 
 # ------------ Paths ------------
-root_dir = '/Volumes/NED_Backup3'
+root_dir = '/home/emmacona/projects/def-lippes/emmacona'
 features_dir = os.path.join(root_dir, 'Q1K_BC_EEG_features')
 output_file = os.path.join(root_dir, 'Q1K_BC_EEG_features', 'Q1K_BC_aggregated_EEG_features_by_roi.csv')
 
@@ -57,15 +57,24 @@ def extract_participant_id(filename):
     
     participant_id = None
     
-    # Q1K format: Q1K_HSJ_1525_1009_M1 -> Q1K_HSJ_1525-1009_M1
+    # Q1K format: handle:
+    #   - Q1K_HSJ_1525_1009_M1  --> Q1K_HSJ_1525-1009_M1
+    #   - Q1K_HSJ_1525-1009_M1  (already correct, just use as is)
+    #   - Q1K_HSJ_1525_M1       --> Q1K_HSJ_1525_M1
     if base_name.startswith('Q1K_'):
-        parts = base_name.split('_')
-        if len(parts) >= 4:
-            # Rejoin with dash for the numeric ID parts
-            participant_id = f"{parts[0]}_{parts[1]}_{parts[2]}-{parts[3]}"
-            if len(parts) > 4:
-                # Add any suffix like _M1, _F1, etc.
-                participant_id += '_' + '_'.join(parts[4:])
+        if '-' in base_name:
+            # Already "Q1K_HSJ_1525-1009_M1" format, use as is
+            participant_id = base_name
+        else:
+            parts = base_name.split('_')
+            if len(parts) >= 4 and parts[2].isdigit() and parts[3].startswith('M') is False and parts[3].startswith('F') is False:
+                # Q1K_HSJ_1525_1009_M1 --> Q1K_HSJ_1525-1009_M1
+                participant_id = f"{parts[0]}_{parts[1]}_{parts[2]}-{parts[3]}"
+                if len(parts) > 4:
+                    participant_id += '_' + '_'.join(parts[4:])
+            else:
+                # e.g., Q1K_HSJ_1525_M1, just use as is
+                participant_id = base_name
     
     # Brain Canada format: BC_YYYY_XXXX_ID_LETTER_... -> BC_ID_LETTER
     elif base_name.startswith('BC_'):
