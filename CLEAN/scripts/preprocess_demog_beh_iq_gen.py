@@ -1,3 +1,4 @@
+from decimal import ROUND_05UP
 import pandas as pd
 import os
 
@@ -477,32 +478,35 @@ def merge_nonverbal_iq_columns(df):
     """
     Merge the nonverbal IQ columns into a single nonverbal_iq column.
     There should be no overlapping values: only one of these columns
-    should be non-null per row, but we pick the first non-null in wais_verbcomp_comp,
-    then wisc_vci_cps, then wppsi_47_verbal_v.
-    Drops the original three columns after merging.
+    should be non-null per row, but we pick the first non-null in
+    wais_percreas_comp, then wppsi_47_fluidr_f, then wisc_fri_cps, then leiter3_full_iq.
+    Drops the original four columns after merging.
+    Also creates an iq_test_name column indicating which test contributed the value.
     """
     df = df.copy()
     nonverbal_iq_cols = ['wais_percreas_comp', 'wppsi_47_fluidr_f', 'wisc_fri_cps', 'leiter3_full_iq']
-    df['nonverbal_iq'] = df[nonverbal_iq_cols].bfill(axis=1).iloc[:, 0]
-    cols_present = [col for col in nonverbal_iq_cols if col in df.columns]
-    if cols_present:
-        df = df.drop(columns=cols_present)
 
-    # Add iq_test_name column based on which test provided *the actual* nonverbal_iq value
-    def get_iq_test_name(row):
-        nv = row.get('nonverbal_iq')
-        # Check which column's value matches nonverbal_iq
-        if pd.notnull(nv):
-            if 'wais_percreas_comp' in row and pd.notnull(row['wais_percreas_comp']) and row['wais_percreas_comp'] == nv:
-                return 'WAIS-IV'
-            elif 'wppsi_47_fluidr_f' in row and pd.notnull(row['wppsi_47_fluidr_f']) and row['wppsi_47_fluidr_f'] == nv:
-                return 'WPPSI-V'
-            elif 'wisc_fri_cps' in row and pd.notnull(row['wisc_fri_cps']) and row['wisc_fri_cps'] == nv:
-                return 'WISC-V'
-            elif 'leiter3_full_iq' in row and pd.notnull(row['leiter3_full_iq']) and row['leiter3_full_iq'] == nv:
-                return 'Leiter-3'
-        return None
-    df['iq_test_name'] = df.apply(get_iq_test_name, axis=1)
+    # Only keep columns that actually exist in the dataframe
+    existing_cols = [col for col in nonverbal_iq_cols if col in df.columns]
+
+    # Set nonverbal_iq and test name
+    def get_nonverbal_iq_and_test(row):
+        for col, test in zip(
+            ['wais_percreas_comp', 'wppsi_47_fluidr_f', 'wisc_fri_cps', 'leiter3_full_iq'],
+            ['WAIS-IV', 'WPPSI-V', 'WISC-V', 'Leiter-3']
+        ):
+            if col in df.columns and pd.notnull(row.get(col)):
+                return row.get(col), test
+        return None, None
+
+    result = df.apply(get_nonverbal_iq_and_test, axis=1, result_type='expand')
+    df['nonverbal_iq'] = result[0]
+    df['iq_test_name'] = result[1]
+
+    # Drop source columns if present
+    drop_cols = [col for col in nonverbal_iq_cols if col in df.columns]
+    if drop_cols:
+        df = df.drop(columns=drop_cols)
 
     return df
 
@@ -596,6 +600,74 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
     present_viq = [col for col in viq_cols if col in bc_data_df.columns]
     bc_data_df['verbal_iq'] = bc_data_df[present_viq].bfill(axis=1).iloc[:, 0] if present_viq else None
 
+    # Add iq_test_name column based on 'selected_iq_test' column
+    print("\nMapping IQ test names...")
+    
+    # Check if column exists
+    if 'selected_iq_test' in bc_data_df.columns:
+        print(f"  'selected_iq_test' column found")
+        print(f"  Unique values in selected_iq_test: {bc_data_df['selected_iq_test'].unique()}")
+        print(f"  Non-null count: {bc_data_df['selected_iq_test'].notna().sum()}")
+        
+        iq_test_map = {
+            '10': 'WISC-V',
+            '11': 'WPPSI-IV (4-7y)',
+            '12': 'WASI-II',
+            '13': 'MSEL',
+            '14': 'Leiter-R',
+            '15': 'WPPSI-IV (2-4y)',
+            '16': 'WAIS-IV',
+            '17': '',
+            10: 'WISC-V',
+            11: 'WPPSI-IV (4-7y)',
+            12: 'WASI-II',
+            13: 'MSEL',
+            14: 'Leiter-R',
+            15: 'WPPSI-IV (2-4y)',
+            16: 'WAIS-IV',
+            17: '',
+            10.0: 'WISC-V',
+            11.0: 'WPPSI-IV (4-7y)',
+            12.0: 'WASI-II',
+            13.0: 'MSEL',
+            14.0: 'Leiter-R',
+            15.0: 'WPPSI-IV (2-4y)',
+            16.0: 'WAIS-IV',
+            17.0: ''
+        }
+        
+        def map_iq(val):
+            # Treat empty strings, explicit None, or NaN as missing
+            if pd.isnull(val) or (isinstance(val, str) and val.strip() == ''):
+                return None
+            
+            # Try direct lookup first
+            if val in iq_test_map:
+                return iq_test_map[val]
+            
+            # Try as string
+            key_str = str(val).strip()
+            if key_str in iq_test_map:
+                return iq_test_map[key_str]
+            
+            # Try converting to int/float
+            try:
+                val_float = float(val)
+                if val_float in iq_test_map:
+                    return iq_test_map[val_float]
+                val_int = int(val_float)
+                if val_int in iq_test_map:
+                    return iq_test_map[val_int]
+            except (ValueError, TypeError):
+                pass
+            
+            return None
+        
+        bc_data_df['iq_test_name'] = bc_data_df['selected_iq_test'].apply(map_iq)
+    else:
+        print(f"  WARNING: 'selected_iq_test' column not found in bc_data_df")
+        bc_data_df['iq_test_name'] = None
+
     # # 12. Combine faa_age and age_np as 'age_at_test'
     # age_cols = ['faa_age', 'age_np']
     # present_age = [col for col in age_cols if col in bc_data_df.columns]
@@ -623,7 +695,7 @@ def merge_bc_data(df, bc_data_file, bc_diagnosis_file):
     keep_cols = [
         'record_id', 'participant_id',
         'age_at_test', 'sex', 'ethnicities', 'highest_education_level', 
-        'nonverbal_iq', 'verbal_iq',
+        'nonverbal_iq', 'verbal_iq','iq_test_name',
         'SRS_social_communication_tscore', 'SRS_social_cognition_tscore', 'SRS_restrictive_repetitive_tscore',
         'attention_deficit_hyperactivity_tscore', 'oppositional_defiant_tscore',
         'ghf_sleeping'
@@ -705,16 +777,16 @@ if __name__ == "__main__":
     # PATHS & CONTSTANTS 
     # ------------------------------------------------------------
     ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-    OUTPUT_FILE_PATH = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
+    OUTPUT_FILE_PATH = ROOT_DIR + "/DATA/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_25_2025.csv"
 
     # Input file path
     ## Q1K
-    Q1K_input_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-07_1050.csv"
-    Q1K_beh_iq_file = ROOT_DIR + "/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-11-07_1050.csv"
+    Q1K_input_file = ROOT_DIR + "/DATA/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-07_1050.csv"
+    Q1K_beh_iq_file = ROOT_DIR + "/DATA/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-11-07_1050.csv"
     
     ## Brain Canada
-    BC_data_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-05_1549.csv"
-    BC_diagnosis_file = ROOT_DIR + "/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNDiagnostics_DATA_2025-11-10_1614.csv"
+    BC_data_file = ROOT_DIR + "/DATA/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-25_1220.csv"
+    BC_diagnosis_file = ROOT_DIR + "/DATA/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNDiagnostics_DATA_2025-11-10_1614.csv"
     # BC_genetic_file = ""
     
     # Extract specific columns & merge behavioral/iq scores
