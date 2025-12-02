@@ -10,7 +10,7 @@ from datetime import datetime
 
 # Input file paths
 EEG_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_EEG_features_global.csv"
-CLUSTERED_DATA_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_25_2025.csv"
+CLUSTERED_DATA_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_27_2025.csv"
 
 # Output directory
 OUTPUT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs"

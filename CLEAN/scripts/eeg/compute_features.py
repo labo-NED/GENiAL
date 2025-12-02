@@ -28,7 +28,7 @@ EPOCH_5S = False  # Set to True to process 5s epochs, False to skip
 
 # ------------ Paths ------------
 # Detect if running locally (if root_dir points to external volume)
-IS_LOCAL = True  # Set to True for local runs, False for cluster runs
+IS_LOCAL = False  # Set to True for local runs, False for cluster runs
 
 if IS_LOCAL:
     # Locally - no parallelization
@@ -38,10 +38,10 @@ if IS_LOCAL:
     os.makedirs(output_dir, exist_ok=True)
 else:
     # Cluster
-    root_dir = '/home/emmacona/projects/def-lippes/emmacona'
-    dir_2s = os.path.join(root_dir, 'COMBINED_BC_Q1K_PREPROCESSED_RS_EEG_2s')
-    dir_5s = os.path.join(root_dir, 'COMBINED_BC_Q1K_PREPROCESSED_RS_EEG_5s')
-    output_dir = '/scratch/emmacona/Q1K_BC_EEG_features'
+    root_dir = '/home/emmacona/links/projects/def-lippes/emmacona/Q1K_BC_HAPPEv3_ICA/'
+    dir_2s = os.path.join(root_dir, '2s_epochs')
+    dir_5s = os.path.join(root_dir, '5s_epochs')
+    output_dir = '/home/emmacona/links/projects/def-lippes/emmacona/Q1K_BC_HAPPEv3_ICA/Features/'
     os.makedirs(output_dir, exist_ok=True)
 
 # Scan directories for .set files

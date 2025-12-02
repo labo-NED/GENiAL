@@ -34,8 +34,8 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'NOV26'
-database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_EEG_features_RSRio_NOV_24_2025.csv"
+TIMESTAMP = 'NOV27'
+database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_EEG_features_global_RSRio_NOV_27_2025.csv"
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
 
@@ -47,6 +47,9 @@ base_eeg_features <- c('hurst_2s',
 base_eeg_2s_features <- c('hurst_2s', 
                           'pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
                           'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s')
+
+band_power_features <- c('pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
+                         'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s')
 
 ######################################################################
 ########################## Import dataset ############################
@@ -89,6 +92,25 @@ db_copy |>
 ######################################################################
 ########################### Clean Up  ################################
 ######################################################################
+# ---- Log transform power band features ----#
+for (feat in band_power_features) {
+  if (feat %in% names(db_copy)) {
+    newname <- paste0("log_", feat)
+    # Only log-transform positive values to avoid NaNs from zeros/negatives
+    source_vals <- db_copy[[feat]]
+    db_copy[[newname]] <- NA_real_
+    valid_idx <- !is.na(source_vals) & source_vals > 0
+    db_copy[[newname]][valid_idx] <- log(source_vals[valid_idx])
+  }
+}
+
+# Update eeg_features list with new log features
+eeg_features <- c(eeg_features, paste0("log_", band_power_features))
+
+# save updated database
+write.csv(db_copy, file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs", paste0("merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
+
+
 # ---- Recode ethnicities into new categories ---- #
 db_copy$ethnicity_recoded <- dplyr::case_when(
   ## White / European

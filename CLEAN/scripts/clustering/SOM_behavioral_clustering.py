@@ -12,9 +12,9 @@ import os
 # ------------------------------------------------------------
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA"
 INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_25_2025.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_25_2025.csv"
-RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_MHC_BC_DATA_NOV_25_2025_cluster_radars.png"
-SELECTION_CURVES_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_MHC_BC_DATA_NOV_25_2025_selection_curves.png"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_27_2025.csv"
+RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_MHC_BC_DATA_NOV_27_2025_cluster_radars.png"
+SELECTION_CURVES_FILE = ROOT_DIR + "/Outputs/Plots/SOM_Q1K_CHU_MHC_BC_DATA_NOV_27_2025_selection_curves.png"
 
 BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
@@ -62,7 +62,7 @@ if n_total_complete != (n_in_age + n_out_age):
 
 # --- END - Code diagnosis ---
 
-# Keep participants with age between 5-18 inclusively
+# Keep participants with age between 0-18 inclusively
 df = df[age_in]
 
 # Ensure numeric and complete cases
@@ -70,6 +70,9 @@ for col in BEHAVIORAL_VARS:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 complete_case_mask = df[BEHAVIORAL_VARS].notna().all(axis=1)
 df = df.loc[complete_case_mask].copy()
+
+# Keep participants with diagnosis not empty
+df = df[df['diagnosis'].notna()]
 
 # Scale 0-1 for SOM
 scaler = MinMaxScaler()

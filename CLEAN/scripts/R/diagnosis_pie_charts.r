@@ -17,7 +17,7 @@ library(tibble)
 
 ########################## Import dataset ############################
 # CLUSTERS WITH SOM (+ CONTROLS)
-original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv")
+original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_NOV_27_2025.csv")
 
 og_dataset_copy <- original_dataset # Make a copy for preprocessing
 
@@ -30,7 +30,7 @@ og_dataset_copy$cluster <- as.factor(og_dataset_copy$cluster)
 diagnosis_labels <- function(diagnosis_string) {
   # Handle missing or empty values
   if (is.na(diagnosis_string) || diagnosis_string == "" || diagnosis_string == "None") {
-    return("No ASD/ADHD")
+    return("No diagnosis")
   }
   
   # Split by comma or semicolon and clean whitespace
@@ -46,7 +46,7 @@ diagnosis_labels <- function(diagnosis_string) {
   has_asd_behavior <- any(diagnoses %in% c("autism_behavior", "autistic_behav", "autistic behavior"))
   has_adhd <- any(diagnoses %in% c("adhd", "attention_deficit_hyperactivity", "attention deficit hyperactivity"))
   
-  # Determine diagnostic group (same logic as before)
+  # Determine diagnostic group
   if (has_asd && has_adhd) {
     return("ASD + ADHD")
   } else if (has_asd) {
@@ -56,7 +56,7 @@ diagnosis_labels <- function(diagnosis_string) {
   } else if (has_adhd) {
     return("ADHD")
   } else {
-    return("No ASD/ADHD")
+    return("Other diagnosis")
   }
 }
 
@@ -72,7 +72,8 @@ diagnosis_colors <- c(
   "ADHD" = "#E91E63",             # pink
   "ASD + ADHD" = "#8E24AA",            # purple
   "ADHD + ASD behavior" = "#BA68C8",   # light purple
-  "No ASD/ADHD" = "#9E9E9E"            # gray
+  "No diagnosis" = "#BDBDBD",          # light gray
+  "Other diagnosis" = "#757575"        # medium gray
 )
 
 ########################## Pie Charts for Individual Clusters ##########################
@@ -148,7 +149,7 @@ for (cl in clusters) {
 
   # Save pie chart as PNG with fixed aspect ratio for the chart portion
   ggsave(
-    filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/diagnosis_pie_chart_cluster_", cl, ".png"),
+    filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_pie_chart_cluster_", cl, ".png"),
     plot = pie_chart,
     width = 8,
     height = 6,
@@ -269,13 +270,13 @@ diagnosis_freq_wide <- diagnosis_freq_by_cluster %>%
 # Save frequency tables
 write.csv(
   diagnosis_freq_by_cluster,
-  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/diagnosis_frequency_by_cluster_long.csv",
+  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_by_cluster_long.csv",
   row.names = FALSE
 )
 
 write.csv(
   diagnosis_freq_wide,
-  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/diagnosis_frequency_by_cluster_wide.csv",
+  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_by_cluster_wide.csv",
   row.names = FALSE
 )
 
@@ -319,7 +320,7 @@ for (cl in levels(og_dataset_copy$cluster)) {
       scale_y_continuous(expand = expansion(mult = c(0, 0.15)))
     
     ggsave(
-      filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/diagnosis_frequency_cluster_", cl, ".png"),
+      filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_cluster_", cl, ".png"),
       plot = p,
       width = 10,
       height = 6,
@@ -354,7 +355,7 @@ diagnosis_freq_matrix <- diagnosis_freq_by_cluster %>%
 # Create heatmap
 library(pheatmap)
 
-pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/diagnosis_frequency_heatmap.pdf", 
+pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_heatmap.pdf", 
     width = 8, height = 10)
 pheatmap(
   diagnosis_freq_matrix,

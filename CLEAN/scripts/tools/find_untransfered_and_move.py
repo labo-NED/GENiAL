@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Input paths
 all_files_list = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/all_2s_eeg_list.txt'
-transferred_files_list = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/trasnfered_eeg_list.txt'
+transferred_files_list = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/transferred_eeg_list.txt'
 
 # Output paths
 missing_files_output = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/untransferred_eeg_list.txt'
