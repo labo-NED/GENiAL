@@ -446,13 +446,13 @@ out_dir <- "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Output
 
 # Open sink file for emmeans tables
 sink(file.path(out_dir,
-               paste0("emmeans_tables_sig_features_", analysis_label, "_", TIMESTAMP, ".txt")))
+               paste0("emmeans_tables_all_features_", analysis_label, "_", TIMESTAMP, ".txt")))
 
 pdf(file.path(out_dir,
-              paste0("boxplots_sig_features_with_stars_", analysis_label, "_", TIMESTAMP, ".pdf")),
+              paste0("boxplots_all_features_with_stars_", analysis_label, "_", TIMESTAMP, ".pdf")),
     width = 7, height = 5)
 
-for (feat in signif_feats) {
+for (feat in eeg_features) {
   
   dat_feat <- df[, c("cluster", "age_at_test", "sex", feat)]
   dat_feat <- na.omit(dat_feat)
