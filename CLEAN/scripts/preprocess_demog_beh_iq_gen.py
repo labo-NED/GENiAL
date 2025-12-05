@@ -776,8 +776,9 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     # PATHS & CONTSTANTS 
     # ------------------------------------------------------------
+    TIMESTAMP = "DEC_05_2025"
     ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-    OUTPUT_FILE_PATH = ROOT_DIR + "/DATA/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_25_2025.csv"
+    OUTPUT_FILE_PATH = ROOT_DIR + f"/DATA/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_{TIMESTAMP}.csv"
 
     # Input file path
     ## Q1K

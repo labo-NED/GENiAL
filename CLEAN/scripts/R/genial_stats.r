@@ -34,22 +34,23 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'NOV27'
-database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_EEG_features_global_RSRio_NOV_27_2025.csv"
+TIMESTAMP = 'DEC_05_2025'
+database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_05_2025.csv"
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
 
 base_eeg_features <- c('hurst_2s', 
                        'pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
                        'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s',
+                       'fooof_offset_mean','fooof_exponent_mean','fooof_offset_median','fooof_exponent_median',
                        'higuchi_fd_5s', 'katz_fd_5s',
                        'samp_entropy_5s', 'CI_5s', 'CI_lowscale_5s', 'CI_highscale_5s')
 base_eeg_2s_features <- c('hurst_2s', 
+                          'fooof_offset_mean','fooof_exponent_mean','fooof_offset_median','fooof_exponent_median',
                           'pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
                           'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s')
 
-band_power_features <- c('pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
-                         'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s')
+absolute_band_power_features <- c('pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s')
 
 ######################################################################
 ########################## Import dataset ############################
@@ -93,7 +94,7 @@ db_copy |>
 ########################### Clean Up  ################################
 ######################################################################
 # ---- Log transform power band features ----#
-for (feat in band_power_features) {
+for (feat in absolute_band_power_features) {
   if (feat %in% names(db_copy)) {
     newname <- paste0("log_", feat)
     # Only log-transform positive values to avoid NaNs from zeros/negatives
@@ -104,12 +105,9 @@ for (feat in band_power_features) {
   }
 }
 
-# Update eeg_features list with new log features
-eeg_features <- c(eeg_features, paste0("log_", band_power_features))
-
-# save updated database
-write.csv(db_copy, file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs", paste0("merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
-
+# Update eeg_features list with new log features and remove original band power features
+eeg_features <- c(eeg_features, paste0("log_", absolute_band_power_features))
+eeg_features <- setdiff(eeg_features, absolute_band_power_features)
 
 # ---- Recode ethnicities into new categories ---- #
 db_copy$ethnicity_recoded <- dplyr::case_when(
@@ -207,6 +205,9 @@ db_copy$ethnicity_recoded <- dplyr::case_when(
 )
 
 db_copy$ethnicity_recoded <- factor(db_copy$ethnicity_recoded)
+
+# save updated database
+write.csv(db_copy, file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs", paste0("merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
 
 
 ######################################################################
@@ -343,6 +344,9 @@ df$cluster <- factor(df$cluster, levels = c(0, 1, 2, 3))
 df$sex <- factor(df$sex)
 covariates <- c("age_at_test", "sex")
 
+# Set reference cluster for ANOVA models (change this to set a different reference)
+reference_cluster <- 1
+
 # ---- Feature-wise ANCOVA for each EEG feature ----#
 sink(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Stats/", paste0("EEG_features_statsmodel_summaries_", analysis_label, "_", TIMESTAMP, ".txt")))
 results <- lapply(eeg_features, function(feat) {
@@ -360,6 +364,14 @@ results <- lapply(eeg_features, function(feat) {
   if (nlevels(dat_feat$cluster) < 2) {
     cat("Skipped: cluster has fewer than 2 levels after NA removal\n")
     return(data.frame(feature = feat, p_value = NA_real_))
+  }
+  
+  # Set reference cluster (only if the reference cluster exists in the data)
+  if (reference_cluster %in% levels(dat_feat$cluster)) {
+    dat_feat$cluster <- relevel(dat_feat$cluster, ref = as.character(reference_cluster))
+    cat("Reference cluster set to:", reference_cluster, "\n")
+  } else {
+    cat("Warning: Reference cluster", reference_cluster, "not present in data, using default reference\n")
   }
   
   # If sex has only 1 level, drop sex from the model for this feature
@@ -407,6 +419,11 @@ for (feat in signif_feats) {
   dat_feat$cluster <- droplevels(dat_feat$cluster)
   dat_feat$sex     <- droplevels(dat_feat$sex)
   
+  # Set reference cluster (only if the reference cluster exists in the data)
+  if (reference_cluster %in% levels(dat_feat$cluster)) {
+    dat_feat$cluster <- relevel(dat_feat$cluster, ref = as.character(reference_cluster))
+  }
+  
   if (nlevels(dat_feat$sex) < 2) {
     form <- as.formula(paste(feat, "~ cluster + age_at_test"))
   } else {
@@ -427,6 +444,10 @@ sink()
 # ---- BOX PLOTS ---- #
 out_dir <- "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Stats/"
 
+# Open sink file for emmeans tables
+sink(file.path(out_dir,
+               paste0("emmeans_tables_sig_features_", analysis_label, "_", TIMESTAMP, ".txt")))
+
 pdf(file.path(out_dir,
               paste0("boxplots_sig_features_with_stars_", analysis_label, "_", TIMESTAMP, ".pdf")),
     width = 7, height = 5)
@@ -440,6 +461,11 @@ for (feat in signif_feats) {
   
   if (nrow(dat_feat) == 0 || nlevels(dat_feat$cluster) < 2) next
   
+  # Set reference cluster (only if the reference cluster exists in the data)
+  if (reference_cluster %in% levels(dat_feat$cluster)) {
+    dat_feat$cluster <- relevel(dat_feat$cluster, ref = as.character(reference_cluster))
+  }
+  
   if (nlevels(dat_feat$sex) < 2) {
     form <- as.formula(paste(feat, "~ cluster + age_at_test"))
   } else {
@@ -449,8 +475,31 @@ for (feat in signif_feats) {
   fit <- lm(form, data = dat_feat)
   
   emm   <- emmeans::emmeans(fit, "cluster")
+  
+  # Print emmeans table for this feature
+  cat("\n======================\n")
+  cat("Feature:", feat, "\n")
+  cat("======================\n\n")
+  cat("Estimated Marginal Means:\n")
+  print(emm)
+  cat("\n")
+  
   pw    <- pairs(emm, adjust = "none")
   pw_df <- as.data.frame(pw)
+  
+  # Add significance stars to pairwise comparisons
+  pw_df$stars <- sapply(pw_df$p.value, function(pv) {
+    if (is.na(pv)) ""
+    else if (pv < 0.001) "***"
+    else if (pv < 0.01) "**"
+    else if (pv < 0.05) "*"
+    else ""
+  })
+  
+  # Print pairwise comparisons with p-values and stars
+  cat("Pairwise Comparisons:\n")
+  print(pw_df[, c("contrast", "estimate", "SE", "df", "t.ratio", "p.value", "stars")], row.names = FALSE)
+  cat("\n")
   
   sig_pw <- pw_df %>% dplyr::filter(p.value < 0.05)
   
@@ -460,6 +509,9 @@ for (feat in signif_feats) {
   y_min   <- min(dat_feat[[feat]], na.rm = TRUE)
   y_range <- y_max - y_min
   if (y_range == 0) y_range <- 1
+  
+  # Add simple buffer above y-axis (30% of range)
+  y_upper_limit <- y_max + y_range * 0.30
   
   p <- ggplot(dat_feat, aes(x = factor(cluster), y = .data[[feat]])) +
     geom_boxplot(outlier.shape = NA, alpha = 0.6) +
@@ -489,7 +541,8 @@ for (feat in signif_feats) {
       x = "Cluster",
       y = feat
     ) +
-    theme_bw()
+    theme_bw() +
+    coord_cartesian(ylim = c(y_min - y_range * 0.05, y_upper_limit))
   
   if (nrow(sig_pw) > 0) {
     parts  <- strsplit(as.character(sig_pw$contrast), " - ")
@@ -533,3 +586,6 @@ for (feat in signif_feats) {
 }
 
 dev.off()
+
+# Close sink file for emmeans tables
+sink()
