@@ -26,6 +26,8 @@ start_time = time.time()
 EPOCH_2S = True  # Set to True to process 2s epochs, False to skip
 EPOCH_5S = False  # Set to True to process 5s epochs, False to skip
 
+SKIP_PROCESSED = False # Set to True if want to skip files that already have outputs
+
 # ------------ Paths ------------
 # Detect if running locally (if root_dir points to external volume)
 IS_LOCAL = False  # Set to True for local runs, False for cluster runs
@@ -79,6 +81,7 @@ print()
 # ------------ Common Params ------------
 Fs = 1000
 n_chans = 108
+
 # Set n_cores: 1 for local (no parallelization), use SLURM value for cluster
 if IS_LOCAL:
     n_cores = 1
@@ -88,7 +91,7 @@ else:
     print(f'Cluster mode: Using {n_cores} cores for parallelization\n')
 
 maxscale = 40  # maximum scale for MSE
-excluded_chans = ['48','119','43','49','56','63','68','73','81','88','94','99','107','113','120','125','126','127','128','17','129']  # w/ ref
+excluded_chans = ['48','119','43','49','56','63','68','73','81','88','94','99','107','113','120','125','126','127','128','17','129']  # Already excluded after HAPPEv3_ICA
 included_chans = [str(idx) for idx in range(1, 130) if str(idx) not in excluded_chans]
 
 # ---------- CONSTANTS ----------
@@ -110,17 +113,17 @@ def compute_mse(data, maxscale):
 for file_idx, (filepath, epoch_type) in enumerate(all_files):
     filename = os.path.basename(filepath)
 
-    # ----- Skip files that are already processed -----
+    # ----- Define output files -----
     output_base = filename.replace('.set', '').replace('_processed', '')
     out_pkl = os.path.join(output_dir, f'features_{output_base}.pkl')
     out_csv = os.path.join(output_dir, f'features_avg_{output_base}.csv')
-
-    if os.path.exists(out_pkl) and os.path.exists(out_csv):
-        print(f'\nSkipping file {file_idx+1}/{nFiles}: {filename} ({epoch_type}) - outputs already exist.\n')
-        continue
-    # ------------------------------------------------------
     
-    print(f'\nProcessing file {file_idx+1}/{nFiles}: {filename} ({epoch_type})\n')
+    # ----- Skip files that are already processed -----
+    if SKIP_PROCESSED and os.path.exists(out_pkl) and os.path.exists(out_csv):  
+        print(f'\nSkipping file {file_idx+1}/{nFiles}: {filename} ({epoch_type}) - outputs already exist.\n')
+        continue            
+    else:
+        print(f'\nProcessing file {file_idx+1}/{nFiles}: {filename} ({epoch_type})\n')
     
     features = {}
     mse_array = None
@@ -136,34 +139,36 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
         except Exception as e:
             print(f'Error reading 2s file {filename}: {e}')
             continue
+        
         # Keep only bad channels that actually exist in this file
         bad_existing = [ch for ch in excluded_chans if ch in epochs_short.ch_names]
         epochs_short.info['bads'] = bad_existing
-
         print(np.shape(epochs_short.get_data(picks='all')))
         epoch_data = epochs_short.get_data(picks='all')[:,:n_chans] # excluding bad channels
         n_epochs = epoch_data.shape[0]
-        features_short = ['hurst', 'pow_delta', 'pow_theta', 'pow_alpha','pow_beta', 'pow_gamma', 'pow_low_gamma', 'pow_high_gamma',\
-                            'fooof_offset', 'fooof_exp', 'pow_per_delta', 'pow_per_theta', 'pow_per_alpha', 'pow_per_beta', 'pow_per_gamma',\
+        features_short = ['hurst', 'pow_delta', 'pow_theta', 'pow_alpha','pow_beta', 'pow_gamma', 'pow_low_gamma', 'pow_high_gamma',
+                            'fooof_offset', 'fooof_exponent', 'pow_per_delta', 'pow_per_theta', 'pow_per_alpha', 'pow_per_beta', 'pow_per_gamma',
                             'pow_per_low_gamma', 'pow_per_high_gamma']
 
         if n_epochs>0:
-            # get some features using mne-features ### to parallelize?
+            # Power features (absolute power bands, hurst)
             print('\nExtracting non-FOOOF 2s features...')
             previous_time = time.time()
             selected_funcs = ['hurst_exp', 'pow_freq_bands']
-            
             feat_params = {'pow_freq_bands__freq_bands': FREQ_BANDS,
                             'pow_freq_bands__normalize': False, # absolute powers
                             'pow_freq_bands__psd_method': 'welch'}
+            
             fe = FeatureExtractor(sfreq=Fs, selected_funcs=selected_funcs, params=feat_params)
             feat_arr = fe.fit_transform(epoch_data)
+            
             for f, feature in enumerate(features_short[:8]):
                 features[feature] = feat_arr[:,n_chans*f:n_chans*(f+1)]
+            
             comp_time = time.time() - previous_time
             print(f'Computation time: {comp_time:.3f}s\n')
 
-            # get other features using FOOOF
+            # FOOOF features (periodic bands, offset, and exponent)
             print('\nExtracting FOOOF features...')
             previous_time = time.time()
             spec = epochs_short.compute_psd(method='welch', fmin=0.5, fmax=80, n_jobs=n_cores) # compute PSD on epoched data
@@ -180,8 +185,14 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
             # Extract aperiodic parameters and periodic spectrum from average fit
             aper_params_avg = fg.get_params('aperiodic')  # (n_chans, 2) - offset and exponent
             per_spec_avg = np.zeros((n_chans, len(freqs)))
+            
             for ch in range(n_chans):
-                per_spec_avg[ch] = fg.get_fooof(ch).get_data(component='peak', space='linear')
+                # Extract periodic spectrum by subtracting aperiodic from full spectrum
+                # This captures ALL oscillatory activity, not just detected peaks
+                full_spectrum = fg.get_fooof(ch).get_data(component='full',space='linear')
+                aperiodic_spectrum = fg.get_fooof(ch).get_data(component='aperiodic',space='linear')
+                periodic_spectrum = full_spectrum - aperiodic_spectrum
+                per_spec_avg[ch] = periodic_spectrum  # Store periodic spectrum for band averaging
             
             # Store FOOOF parameters (replicated across epochs to maintain structure)
             for f, feature in enumerate(features_short[8:10]):
@@ -211,7 +222,6 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
 
         bad_existing = [ch for ch in excluded_chans if ch in epochs_long.ch_names]
         epochs_long.info['bads'] = bad_existing
-
         epoch_data = epochs_long.get_data(picks='all')[:, :n_chans]  # excluding bad channels
         n_epochs = epoch_data.shape[0]
         selected_funcs = ['higuchi_fd', 'katz_fd', 'samp_entropy']
@@ -290,4 +300,3 @@ if nFiles > 0:
     print(f'Average time per file: {total_time/nFiles:.1f} seconds')
 print(f'Output directory: {output_dir}')
 print(f'{"="*60}\n')
-
