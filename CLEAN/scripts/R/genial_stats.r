@@ -34,23 +34,26 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'DEC_05_2025'
-database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_05_2025.csv"
+TIMESTAMP = 'DEC_12_2025'
+database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_12_2025.csv"
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
 
 base_eeg_features <- c('hurst_2s', 
                        'pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
                        'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s',
-                       'fooof_offset_mean','fooof_exponent_mean','fooof_offset_median','fooof_exponent_median',
+                       'fooof_exponent_2s','fooof_offset_2s',
                        'higuchi_fd_5s', 'katz_fd_5s',
                        'samp_entropy_5s', 'CI_5s', 'CI_lowscale_5s', 'CI_highscale_5s')
 base_eeg_2s_features <- c('hurst_2s', 
-                          'fooof_offset_mean','fooof_exponent_mean','fooof_offset_median','fooof_exponent_median',
+                          'fooof_offset_2s','fooof_exponent_2s',
                           'pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
                           'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s')
 
 absolute_band_power_features <- c('pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s')
+
+# only 2s features
+base_eeg_features <- base_eeg_2s_features
 
 ######################################################################
 ########################## Import dataset ############################
@@ -344,6 +347,59 @@ df$cluster <- factor(df$cluster, levels = c(0, 1, 2, 3))
 df$sex <- factor(df$sex)
 covariates <- c("age_at_test", "sex")
 
+# --- Choose reference cluster --- #
+
+# Compute average values by cluster for reference selection
+cat("\n========================================\n")
+cat("AVERAGE VALUES BY CLUSTER\n")
+cat("(for reference cluster selection)\n")
+cat("========================================\n\n")
+
+cluster_means <- db_copy |>
+  group_by(cluster) |>
+  summarise(
+    n = n(),
+    # SRS variables
+    SRS_restrictive_repetitive_mean = mean(SRS_restrictive_repetitive_tscore, na.rm = TRUE),
+    SRS_restrictive_repetitive_sd = sd(SRS_restrictive_repetitive_tscore, na.rm = TRUE),
+    SRS_social_communication_mean = mean(SRS_social_communication_tscore, na.rm = TRUE),
+    SRS_social_communication_sd = sd(SRS_social_communication_tscore, na.rm = TRUE),
+    SRS_social_cognition_mean = mean(SRS_social_cognition_tscore, na.rm = TRUE),
+    SRS_social_cognition_sd = sd(SRS_social_cognition_tscore, na.rm = TRUE),
+    # ADHD tscore
+    ADHD_tscore_mean = mean(attention_deficit_hyperactivity_tscore, na.rm = TRUE),
+    ADHD_tscore_sd = sd(attention_deficit_hyperactivity_tscore, na.rm = TRUE),
+    # NVIQ
+    NVIQ_mean = mean(nonverbal_iq, na.rm = TRUE),
+    NVIQ_sd = sd(nonverbal_iq, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+# Print formatted table
+print(cluster_means)
+
+# Also print in a more readable format
+cat("\n--- Summary by Cluster ---\n")
+for (i in seq_len(nrow(cluster_means))) {
+  cat(sprintf("\nCluster %d (n = %d):\n", cluster_means$cluster[i], cluster_means$n[i]))
+  cat(sprintf("  SRS Restrictive/Repetitive: %.2f (SD = %.2f)\n", 
+              cluster_means$SRS_restrictive_repetitive_mean[i], 
+              cluster_means$SRS_restrictive_repetitive_sd[i]))
+  cat(sprintf("  SRS Social Communication:   %.2f (SD = %.2f)\n", 
+              cluster_means$SRS_social_communication_mean[i], 
+              cluster_means$SRS_social_communication_sd[i]))
+  cat(sprintf("  SRS Social Cognition:      %.2f (SD = %.2f)\n", 
+              cluster_means$SRS_social_cognition_mean[i], 
+              cluster_means$SRS_social_cognition_sd[i]))
+  cat(sprintf("  ADHD T-score:               %.2f (SD = %.2f)\n", 
+              cluster_means$ADHD_tscore_mean[i], 
+              cluster_means$ADHD_tscore_sd[i]))
+  cat(sprintf("  NVIQ:                      %.2f (SD = %.2f)\n", 
+              cluster_means$NVIQ_mean[i], 
+              cluster_means$NVIQ_sd[i]))
+}
+cat("\n========================================\n\n")
+
 # Set reference cluster for ANOVA models (change this to set a different reference)
 reference_cluster <- 1
 
@@ -589,3 +645,54 @@ dev.off()
 
 # Close sink file for emmeans tables
 sink()
+
+######################################################################
+####################### INTER-FEATURE CORRELATION ####################
+######################################################################
+
+cat("\n\n######################################################################\n")
+cat("#################### EEG Feature Inter-Correlation ###################\n")
+cat("######################################################################\n\n")
+
+# Use the log-transformed and cleaned EEG features (as defined in your clean-up section)
+eeg_data_for_corr <- db_copy %>%
+  dplyr::select(all_of(eeg_features)) %>%
+  na.omit() # Remove any rows with NA in the selected features
+
+cat(sprintf("Number of participants for correlation analysis: %d\n", nrow(eeg_data_for_corr)))
+
+# Calculate the Pearson correlation matrix
+correlation_matrix <- cor(eeg_data_for_corr, method = "pearson")
+
+# Print the full correlation matrix
+cat("\n--- Full Pearson Correlation Matrix (r values) ---\n")
+print(round(correlation_matrix, 3))
+
+# Optionally, save the correlation matrix to a CSV file
+write.csv(round(correlation_matrix, 3),
+          file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Stats/", paste0("eeg_feature_correlation_matrix_", analysis_label, "_", TIMESTAMP, ".csv")),
+          row.names = TRUE)
+
+# --- Visualization: Correlogram (using 'corrplot' for better visualization) --- #
+# Note: You may need to install the 'corrplot' package if you haven't already
+# install.packages('corrplot')
+library(corrplot)
+
+pdf(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Stats/", paste0("correlogram_", analysis_label, "_", TIMESTAMP, ".pdf")),
+    width = 10, height = 10)
+
+corrplot(correlation_matrix,
+         method = "circle", # Use colored circles to represent correlation magnitude
+         type = "upper",    # Only show the upper triangle (matrix is symmetric)
+         order = "hclust",  # Order variables by hierarchical clustering (groups similar features)
+         tl.col = "black",  # Color of text labels
+         tl.srt = 45,       # Text label rotation
+         p.mat = cor.mtest(eeg_data_for_corr)$p, # Pass p-values for significance
+         insig = "label_sig", # Add stars for significant correlations
+         sig.level = c(0.001, 0.01, 0.05), # Significance levels for stars
+         pch.cex = 0.9,
+         diag = FALSE) # Do not show the diagonal
+
+dev.off()
+cat("\nCorrelogram saved to PDF: correlogram_", analysis_label, "_", TIMESTAMP, ".pdf\n")
+cat("Correlation Matrix saved to CSV.\n")

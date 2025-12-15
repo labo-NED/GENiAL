@@ -9,9 +9,9 @@ import os
 from datetime import datetime
 
 # Input file paths
-TIMESTAMP = "DEC_05_2025"
-EEG_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_EEG_features_global.csv"
-FOOOF_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_FOOOF_features_global.csv"
+TIMESTAMP = "DEC_12_2025"
+EEG_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_EEG_features_global_DEC_10_2025.csv"
+# FOOOF_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_FOOOF_features_global.csv"
 ORIGNIAL_DATA_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"
 
 # Output directory
@@ -53,26 +53,26 @@ def main():
     print(f"   - Merged rows: {len(merged_df)}")
     print(f"   - Total columns: {len(merged_df.columns)}")
 
-    # ---- Merge fooof features ----
-    print(f"\n5. Merging fooof features on 'participant_id'")
-    fooof_df = pd.read_csv(FOOOF_FEATURES_FILE)
+    # # ---- Merge fooof features ----
+    # print(f"\n5. Merging fooof features on 'participant_id'")
+    # fooof_df = pd.read_csv(FOOOF_FEATURES_FILE)
 
-    # Filter for RSRio condition only
-    fooof_eeg_rsrio = fooof_df[fooof_df['condition'] == 'RSRio'].copy()
-    print(f"   - Rows after filtering fooof features: {len(fooof_eeg_rsrio)}")
-    print(f"   - Unique participants with fooof features: {fooof_eeg_rsrio['participant_id'].nunique()}")
+    # # Filter for RSRio condition only
+    # fooof_eeg_rsrio = fooof_df[fooof_df['condition'] == 'RSRio'].copy()
+    # print(f"   - Rows after filtering fooof features: {len(fooof_eeg_rsrio)}")
+    # print(f"   - Unique participants with fooof features: {fooof_eeg_rsrio['participant_id'].nunique()}")
     
-    # Keep only fooof columns
-    fooof_eeg_rsrio = fooof_eeg_rsrio.drop(columns=['condition', 'source_file', 'n_channels','n_epochs'])
+    # # Keep only fooof columns
+    # fooof_eeg_rsrio = fooof_eeg_rsrio.drop(columns=['condition', 'source_file', 'n_channels','n_epochs'])
 
-    # Merge fooof features with merged data (behavioral & eeg)
-    merged_df = merged_df.merge(fooof_eeg_rsrio, on='participant_id', how='left')
-    print(f"   - Merged rows with fooof features: {len(merged_df)}")
-    print(f"   - Total columns: {len(merged_df.columns)}")
+    # # Merge fooof features with merged data (behavioral & eeg)
+    # merged_df = merged_df.merge(fooof_eeg_rsrio, on='participant_id', how='left')
+    # print(f"   - Merged rows with fooof features: {len(merged_df)}")
+    # print(f"   - Total columns: {len(merged_df.columns)}")
     
     # Check how many participants have EEG data
     eeg_columns = [col for col in eeg_rsrio.columns if col != 'participant_id']
-    eeg_columns = eeg_columns + [col for col in fooof_eeg_rsrio.columns if col != 'participant_id']
+    eeg_columns = eeg_columns + [col for col in eeg_rsrio.columns if col != 'participant_id']
     participants_with_eeg = merged_df[eeg_columns[0]].notna().sum()
     print(f"   - Participants with EEG features: {participants_with_eeg}/{len(merged_df)}")
     

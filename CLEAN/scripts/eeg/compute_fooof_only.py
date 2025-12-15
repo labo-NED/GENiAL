@@ -1,9 +1,10 @@
-### COMPUTE FOOOF APERIODIC PARAMETERS ONLY (GENiAL PROJECT)
-# This script extracts only FOOOF offset and exponent from epoched EEG data
+### COMPUTE FOOOF FEATURES (GENiAL PROJECT)
+# This script extracts FOOOF aperiodic parameters and periodic power from epoched EEG data
 # 
 # Features extracted:
 #   - fooof_offset: Aperiodic offset (broadband power)
 #   - fooof_exponent: Aperiodic exponent (1/f slope)
+#   - Periodic power in frequency bands (delta, theta, alpha, beta, gamma, etc.)
 #
 # Emmanuelle Coutu-Nadeau (Dec 2025) - Based on compute_features.py
 
@@ -46,7 +47,7 @@ if nFiles == 0:
     raise ValueError(f'No .set files found in: {input_dir}')
 
 print(f'\n{"="*60}')
-print(f'FOOOF APERIODIC PARAMETER EXTRACTION')
+print(f'FOOOF FEATURE EXTRACTION')
 print(f'{"="*60}')
 print(f'Input directory:  {input_dir}')
 print(f'Output directory: {output_dir}')
@@ -78,24 +79,26 @@ FMAX = 80
 MIN_PEAK_HEIGHT = 0.1
 PEAK_WIDTH_LIMITS = (1, 12)
 
+# Frequency bands for periodic power computation
+FREQ_BANDS = {'delta': [1,4],
+              'theta': [4,8],
+              'alpha': [8,13],
+              'beta': [13,30],
+              'gamma': [30,80],
+              'low_gamma': [30,59], 
+              'high_gamma': [61,80]}
+
 # ---------- MAIN PROCESSING LOOP ----------
 processed_count = 0
-skipped_count = 0
 error_count = 0
 
 for file_idx, filepath in enumerate(files):
     filename = os.path.basename(filepath)
     
-    # ----- Skip files that are already processed -----
+    # Define output filenames (will be overwritten if they exist)
     output_base = filename.replace('.set', '').replace('_processed', '')
     out_pkl = os.path.join(output_dir, f'fooof_aperiodic_{output_base}.pkl')
     out_csv = os.path.join(output_dir, f'fooof_aperiodic_{output_base}.csv')
-    
-    if os.path.exists(out_pkl) and os.path.exists(out_csv):
-        print(f'[{file_idx+1}/{nFiles}] SKIP: {filename} (already processed)')
-        skipped_count += 1
-        continue
-    # ------------------------------------------------------
     
     print(f'\n[{file_idx+1}/{nFiles}] Processing: {filename}')
     
@@ -149,6 +152,27 @@ for file_idx, filepath in enumerate(files):
         print(f'  Offset range:   [{offset.min():.4f}, {offset.max():.4f}]')
         print(f'  Exponent range: [{exponent.min():.4f}, {exponent.max():.4f}]')
         
+        # Extract periodic spectrum using the same method as compute_features.py
+        # (full spectrum - aperiodic spectrum = periodic/oscillatory component)
+        print('  Computing periodic spectrum...')
+        per_spec_avg = np.zeros((n_chans, len(freqs)))
+        for ch in range(n_chans):
+            # Extract periodic spectrum by subtracting aperiodic from full spectrum
+            # This captures all oscillatory activity, not just detected peaks
+            full_spectrum = fg.get_fooof(ch).get_data(component='full', space='linear')
+            aperiodic_spectrum = fg.get_fooof(ch).get_data(component='aperiodic', space='linear')
+            periodic_spectrum = full_spectrum - aperiodic_spectrum
+            per_spec_avg[ch] = periodic_spectrum  # Store for band averaging
+        
+        # Compute periodic power in frequency bands
+        print('  Computing periodic power in frequency bands...')
+        periodic_powers = {}
+        for band_name, band_freqs in FREQ_BANDS.items():
+            band_mask = np.logical_and(freqs >= band_freqs[0], freqs < band_freqs[1])
+            per_power_band = np.mean(per_spec_avg[:, band_mask], axis=1)  # (n_chans,)
+            periodic_powers[f'pow_per_{band_name}'] = per_power_band
+            print(f'    pow_per_{band_name}: range [{per_power_band.min():.6e}, {per_power_band.max():.6e}]')
+        
         # Create results dictionary
         results = {
             'filename': filename,
@@ -159,6 +183,8 @@ for file_idx, filepath in enumerate(files):
             'fooof_exponent': exponent,
             'freqs': freqs,
             'avg_powers': avg_powers,
+            'periodic_spectrum': per_spec_avg,  # Full periodic spectrum
+            'periodic_powers': periodic_powers,  # Periodic power in frequency bands
             'fooof_group': fg  # Save the entire FOOOFGroup object for later inspection
         }
         
@@ -168,11 +194,16 @@ for file_idx, filepath in enumerate(files):
         print(f'  Saved: {os.path.basename(out_pkl)}')
         
         # Save to CSV (channel-wise)
-        df = pd.DataFrame({
+        csv_data = {
             'channel': included_chans,
             'fooof_offset': offset,
             'fooof_exponent': exponent
-        })
+        }
+        # Add periodic power columns
+        for band_name, band_power in periodic_powers.items():
+            csv_data[band_name] = band_power
+        
+        df = pd.DataFrame(csv_data)
         df.to_csv(out_csv, index=False)
         print(f'  Saved: {os.path.basename(out_csv)}')
         
@@ -191,7 +222,6 @@ print(f'PROCESSING COMPLETE')
 print(f'{"="*60}')
 print(f'Total files:      {nFiles}')
 print(f'Processed:        {processed_count}')
-print(f'Skipped:          {skipped_count}')
 print(f'Errors:           {error_count}')
 print(f'Total time:       {total_time/60:.2f} minutes ({total_time:.1f} seconds)')
 if processed_count > 0:
