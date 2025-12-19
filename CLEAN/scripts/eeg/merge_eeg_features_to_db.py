@@ -9,8 +9,8 @@ import os
 from datetime import datetime
 
 # Input file paths
-TIMESTAMP = "DEC_12_2025"
-EEG_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_EEG_features_global_DEC_10_2025.csv"
+TIMESTAMP = "DEC_16_2025"
+EEG_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_EEG_5s_features_global_DEC_16_2025.csv"
 # FOOOF_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_FOOOF_features_global.csv"
 ORIGNIAL_DATA_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"
 

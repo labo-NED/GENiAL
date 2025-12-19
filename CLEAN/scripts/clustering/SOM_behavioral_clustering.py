@@ -10,7 +10,7 @@ import os
 # ------------------------------------------------------------
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
-TIMESTAMP = "DEC_05_2025"
+TIMESTAMP = "DEC_19_2025"
 
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA"
 INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"

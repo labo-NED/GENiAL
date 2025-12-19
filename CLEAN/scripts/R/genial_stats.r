@@ -34,8 +34,8 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'DEC_12_2025'
-database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_12_2025.csv"
+TIMESTAMP = 'DEC_19_2025'
+database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_16_2025.csv"
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
 
@@ -53,7 +53,7 @@ base_eeg_2s_features <- c('hurst_2s',
 absolute_band_power_features <- c('pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s')
 
 # only 2s features
-base_eeg_features <- base_eeg_2s_features
+# base_eeg_features <- base_eeg_2s_features
 
 ######################################################################
 ########################## Import dataset ############################
@@ -349,6 +349,8 @@ covariates <- c("age_at_test", "sex")
 
 # --- Choose reference cluster --- #
 
+sink(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Stats/", paste0("behavioral_scores_table_", TIMESTAMP, ".txt")))
+
 # Compute average values by cluster for reference selection
 cat("\n========================================\n")
 cat("AVERAGE VALUES BY CLUSTER\n")
@@ -399,9 +401,39 @@ for (i in seq_len(nrow(cluster_means))) {
               cluster_means$NVIQ_sd[i]))
 }
 cat("\n========================================\n\n")
+sink()
 
 # Set reference cluster for ANOVA models (change this to set a different reference)
 reference_cluster <- 1
+
+# ---- Helper function to prepare data for analysis with participant exclusions ----#
+prepare_feature_data <- function(df, feat, verbose = TRUE) {
+  # Select relevant columns including participant_id
+  dat_feat <- df[, c("participant_id", "cluster", "age_at_test", "sex", feat)]
+  dat_feat <- na.omit(dat_feat) # Remove rows with NA
+  
+  # Exclude participants based on feature type (2s vs 5s)
+  if (grepl("_2s$", feat)) {
+    # For 2s features: exclude Q1K_HSJ_1525-1012_P
+    n_before <- nrow(dat_feat)
+    dat_feat <- dat_feat[dat_feat$participant_id != "Q1K_HSJ_1525-1012_P", ]
+    if (verbose && nrow(dat_feat) < n_before) {
+      cat("Excluded participant Q1K_HSJ_1525-1012_P for 2s feature\n")
+    }
+  } else if (grepl("_5s$", feat)) {
+    # For 5s features: exclude Q1K_HSJ_1525-1012_P and Q1K_HSJ_1525-1083_P
+    n_before <- nrow(dat_feat)
+    dat_feat <- dat_feat[!dat_feat$participant_id %in% c("Q1K_HSJ_1525-1012_P", "Q1K_HSJ_1525-1083_P"), ]
+    if (verbose && nrow(dat_feat) < n_before) {
+      cat("Excluded participants Q1K_HSJ_1525-1012_P and Q1K_HSJ_1525-1083_P for 5s feature\n")
+    }
+  }
+  
+  # Remove participant_id column before analysis
+  dat_feat <- dat_feat[, c("cluster", "age_at_test", "sex", feat)]
+  
+  return(dat_feat)
+}
 
 # ---- Feature-wise ANCOVA for each EEG feature ----#
 sink(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Stats/", paste0("EEG_features_statsmodel_summaries_", analysis_label, "_", TIMESTAMP, ".txt")))
@@ -410,9 +442,7 @@ results <- lapply(eeg_features, function(feat) {
   cat("Feature:", feat, "\n")
   cat("======================\n\n")
   
-  dat_feat <- df[, c("cluster", "age_at_test", "sex", feat)]
-  dat_feat <- na.omit(dat_feat) # Remove rows with NA
-  
+  dat_feat <- prepare_feature_data(df, feat, verbose = TRUE)
   dat_feat$cluster <- droplevels(dat_feat$cluster)
   dat_feat$sex     <- droplevels(dat_feat$sex)
   
@@ -470,8 +500,7 @@ for (feat in signif_feats) {
   cat("Feature:", feat, "\n")
   cat("======================\n\n")
   
-  dat_feat <- df[, c("cluster", "age_at_test", "sex", feat)]
-  dat_feat <- na.omit(dat_feat)
+  dat_feat <- prepare_feature_data(df, feat, verbose = TRUE)
   dat_feat$cluster <- droplevels(dat_feat$cluster)
   dat_feat$sex     <- droplevels(dat_feat$sex)
   
@@ -510,8 +539,7 @@ pdf(file.path(out_dir,
 
 for (feat in eeg_features) {
   
-  dat_feat <- df[, c("cluster", "age_at_test", "sex", feat)]
-  dat_feat <- na.omit(dat_feat)
+  dat_feat <- prepare_feature_data(df, feat, verbose = FALSE)
   dat_feat$cluster <- droplevels(factor(dat_feat$cluster))
   dat_feat$sex     <- droplevels(factor(dat_feat$sex))
   
