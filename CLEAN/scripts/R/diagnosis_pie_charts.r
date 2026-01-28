@@ -76,6 +76,85 @@ diagnosis_colors <- c(
   "Other diagnosis" = "#757575"        # medium gray
 )
 
+########################## Diagnoses Pie Charts -- FULL sample ##########################
+cluster_data <- og_dataset_copy
+total_n <- nrow(cluster_data)
+diag_counts <- cluster_data %>%
+  group_by(diagnosis_group) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(perc = count / sum(count) * 100)
+
+# Ensure all diagnosis groups are present (even if count = 0)
+diag_counts <- diag_counts %>%
+  complete(diagnosis_group = levels(og_dataset_copy$diagnosis_group), fill = list(count = 0, perc = 0))
+# Remove groups with count == 0 so they don't get plotted as tiny slivers
+diag_counts <- diag_counts %>% filter(count > 0)
+
+# Plot pie chart with labels positioned outside the chart area
+# Add labels with n (%) outside the pie slices
+
+diag_counts <- diag_counts %>%
+  mutate(
+    label = ifelse(
+      count > 0,
+      paste0(count, " (", sprintf("%.1f", perc), "%)"),
+      ""
+    )
+  )
+
+# Calculate cumulative proportions for label positioning
+diag_counts <- diag_counts %>%
+  arrange(desc(diagnosis_group)) %>%
+  mutate(
+    ymax = cumsum(count),
+    ymin = c(0, head(ymax, n = -1)),
+    mid = (ymax + ymin) / 2,
+    angle = 90 - 360 * (mid / sum(count)),
+    hjust = ifelse(angle < -90, 1, 0),
+    angle = ifelse(angle < -90, angle + 180, angle)
+  )
+pie_chart <- ggplot(diag_counts, aes(x = 1, y = count, fill = diagnosis_group)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y", start = 0) +
+  xlim(c(0.5, 1.5)) +  # Fixed x limits to ensure consistent pie chart radius across all clusters
+  labs(
+    title = paste0("All Participants ", " (n = ", total_n, ") - Diagnostic Distribution"),
+    fill = "Diagnosis"
+  ) +
+  theme_void(base_size = 16) +
+  scale_fill_manual(values = diagnosis_colors, drop = FALSE) +
+  guides(fill = guide_legend(override.aes = list(size = 4))) +
+  theme(
+    plot.title = element_text(hjust = 0, size = 12, face = "bold"),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 8)
+  ) +
+  geom_text(
+    data = diag_counts %>% filter(count > 0),
+    aes(
+      y = mid,
+      label = label,
+      angle = angle,
+      hjust = hjust
+    ),
+    x = 1, # position labels outside the pie
+    size = 3,
+    color = "white",
+    inherit.aes = FALSE
+  )
+
+# Save pie chart as PNG with fixed aspect ratio for the chart portion
+ggsave(
+  filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/diagnosis_pie_chart_full_sample.png"),
+  plot = pie_chart,
+  width = 8,
+  height = 6,
+  dpi = 300,
+  limitsize = FALSE # ensure the size is always used, disables small chart clipping
+)
+# Also display in RStudio/interactive session
+print(pie_chart)
+
 ########################## Pie Charts for Individual Clusters ##########################
 
 clusters <- levels(og_dataset_copy$cluster)

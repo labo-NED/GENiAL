@@ -45,6 +45,10 @@ np.random.seed(RANDOM_STATE)
 # CONFIGURATION
 # ============================================================================
 
+# Bootstrap/Resampling options
+USE_BOOTSTRAP = True  # Set to True to use bootstrap sampling to increase training data
+BOOTSTRAP_MULTIPLIER = 10.0  # Multiply training set size by this factor (e.g., 2.0 = double the size)
+
 # Data paths
 DATA_PATH = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Final/merged_clustered_EEG_features_global_RSRio_DEC_16_2025_logtransformed.csv"
 OUTPUT_DIR = Path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/ML_Results")
@@ -134,6 +138,50 @@ def load_and_preprocess_data(data_path, eeg_features, target_column):
     
     return X, y, df[mask].copy()
 
+
+# ============================================================================
+# BOOTSTRAP/RESAMPLING
+# ============================================================================
+
+def bootstrap_resample(X, y, multiplier=2.0, random_state=None):
+    """
+    Perform bootstrap resampling to increase the number of training samples.
+    
+    Parameters:
+    -----------
+    X : pd.DataFrame or np.array
+        Feature matrix
+    y : pd.Series or np.array
+        Target vector
+    multiplier : float
+        Factor to multiply the dataset size (e.g., 2.0 = double the size)
+    random_state : int or None
+        Random seed for reproducibility
+    
+    Returns:
+    --------
+    X_resampled : pd.DataFrame or np.array
+        Resampled feature matrix
+    y_resampled : pd.Series or np.array
+        Resampled target vector
+    """
+    n_samples = len(X)
+    n_new_samples = int(n_samples * multiplier)
+    
+    if random_state is not None:
+        np.random.seed(random_state)
+    
+    # Sample with replacement
+    indices = np.random.choice(n_samples, size=n_new_samples, replace=True)
+    
+    if isinstance(X, pd.DataFrame):
+        X_resampled = X.iloc[indices].copy()
+        y_resampled = y.iloc[indices].copy()
+    else:
+        X_resampled = X[indices]
+        y_resampled = y[indices]
+    
+    return X_resampled, y_resampled
 
 # ============================================================================
 # FEATURE SELECTION
@@ -670,6 +718,27 @@ def main():
     # Use selected features
     X_train_selected = X_train[best_features]
     X_test_selected = X_test[best_features]
+    
+    # 3.5. Apply bootstrap/resampling if enabled
+    if USE_BOOTSTRAP:
+        print("\n" + "="*80)
+        print("BOOTSTRAP/RESAMPLING")
+        print("="*80)
+        
+        original_size = len(X_train_selected)
+        print(f"Original training set size: {original_size}")
+        
+        if USE_BOOTSTRAP:
+            print(f"\nApplying bootstrap resampling (multiplier: {BOOTSTRAP_MULTIPLIER})...")
+            X_train_selected, y_train = bootstrap_resample(
+                X_train_selected, y_train, 
+                multiplier=BOOTSTRAP_MULTIPLIER, 
+                random_state=RANDOM_STATE
+            )
+            print(f"After bootstrap: {len(X_train_selected)} samples")
+            print(f"Class distribution:\n{pd.Series(y_train).value_counts().sort_index()}")
+        
+        print(f"\nFinal training set size: {len(X_train_selected)}")
     
     # 4. Optimize models
     print("\n" + "="*80)

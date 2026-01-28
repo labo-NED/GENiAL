@@ -34,7 +34,7 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'DEC_19_2025'
+TIMESTAMP = 'JAN_27_2026'
 database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_16_2025.csv"
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
