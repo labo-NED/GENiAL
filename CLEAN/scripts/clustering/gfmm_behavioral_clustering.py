@@ -1,5 +1,6 @@
+from re import M
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score
 import numpy as np
@@ -8,19 +9,19 @@ import matplotlib.pyplot as plt
 # ------------------------------------------------------------
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
-ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_GMM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025.csv"
-SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_NOV_10_2025_silhouette_scores.png"
-RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_NOV_10_20255_cluster_radars.png"
+ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA"
+INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"
+OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026.csv"
+SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026_silhouette_scores.png"
+RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026_cluster_radars.png"
 
 BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',
     'SRS_social_communication_tscore',
     'SRS_restrictive_repetitive_tscore',
     'attention_deficit_hyperactivity_tscore',
-    'oppositional_defiant_tscore',
-    # 'nonverbal_iq'
+    # 'oppositional_defiant_tscore',
+    'nonverbal_iq'
     # 'verbal_iq'
     # 'ghf_sleeping'
 ]
@@ -29,8 +30,8 @@ pretty_labels = {
     'SRS_social_communication_tscore': 'Social Communication',
     'SRS_restrictive_repetitive_tscore': 'Repetitive behavior',
     'attention_deficit_hyperactivity_tscore': 'ADHD',
-    'oppositional_defiant_tscore': 'Oppositional',
-    # 'nonverbal_iq': 'NVIQ'
+    # 'oppositional_defiant_tscore': 'Oppositional',
+    'nonverbal_iq': 'NVIQ'
     # 'verbal_iq': 'VIQ'
     # 'ghf_sleeping': 'Sleeping'
 }
@@ -56,7 +57,7 @@ df = df.loc[complete_case_mask].copy()
 # ----------------------------------------------
 # Standardize the data for Gaussian Mixture Model
 # ----------------------------------------------
-scaler = StandardScaler()
+scaler = StandardScaler() # MinMaxScaler() 
 X = scaler.fit_transform(df[BEHAVIORAL_VARS])
 
 print(f"Data shape after preprocessing: {X.shape}")
