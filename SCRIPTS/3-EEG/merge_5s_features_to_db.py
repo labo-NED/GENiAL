@@ -11,15 +11,15 @@ import os
 
 # Input file paths
 TIMESTAMP = "DEC_16_2025"
-MAIN_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_12_2025.csv"
-EEG_5S_FILE_1 = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_EEG_5s_features_global_DEC_16_2025.csv"
-EEG_5S_FILE_2 = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features/Q1K_BC_aggregated_EEG_features_global.csv"
+MAIN_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_12_2025.csv"
+EEG_5S_FILE_1 = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/eeg_features/Q1K_BC_aggregated_EEG_5s_features_global_DEC_16_2025.csv"
+EEG_5S_FILE_2 = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/eeg_features/Q1K_BC_aggregated_EEG_features_global.csv"
 
 # 5s features to merge
 FEATURES_5S = ['higuchi_fd_5s', 'katz_fd_5s', 'samp_entropy_5s', 'CI_5s', 'CI_lowscale_5s', 'CI_highscale_5s']
 
 # Output directory
-OUTPUT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs"
+OUTPUT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS"
 
 def main():
     print("=" * 80)

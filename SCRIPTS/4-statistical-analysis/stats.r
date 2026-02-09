@@ -13,7 +13,7 @@ library(haven)
 
 ########################## Import dataset ############################
 # CLUSTERS WITH SOM + EEG features
-original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_EEG_features_RSRio_NOV_24_2025.csv")
+original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/merged_clustered_EEG_features_RSRio_NOV_24_2025.csv")
 
 og_dataset_copy <- original_dataset # Make a copy for preprocessing
 
@@ -21,7 +21,7 @@ og_dataset_copy <- original_dataset # Make a copy for preprocessing
 
 #### Plausibilité des scores ###
 # Check frequencies
-sink(file="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/RAW_freq_output.txt")
+sink(file="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/RAW_freq_output.txt")
 lapply(og_dataset_copy, sjmisc::frq)
 sink()
 sink(NULL) # Disable active sink
@@ -55,7 +55,7 @@ og_dataset_copy$highest_education_level_recoded <- dplyr::case_when(
 og_dataset_copy$highest_education_level_recoded <- factor(og_dataset_copy$highest_education_level_recoded)
 
 # Check frequencies
-sink(file="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Outputs/Clustered/RAW_freq_output.txt")
+sink(file="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/RAW_freq_output.txt")
 lapply(og_dataset_copy, sjmisc::frq)
 sink()
 sink(NULL) # Disable active sink
@@ -90,7 +90,7 @@ sink(NULL) # Disable active sink
 og_dataset_copy$sex <- factor(og_dataset_copy$sex)
 
 # Save
-write.csv(og_dataset_copy, file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/FINAL_DATABASE_USED_IN_R_SOM.csv", row.names = FALSE)
+write.csv(og_dataset_copy, file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/FINAL_DATABASE_USED_IN_R_SOM.csv", row.names = FALSE)
 
 ################### Basic Stats ########################
 

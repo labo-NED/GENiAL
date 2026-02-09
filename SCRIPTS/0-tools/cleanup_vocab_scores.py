@@ -8,8 +8,8 @@ import csv
 from collections import defaultdict
 
 # Input and output paths
-input_file = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNvocabularyscaleds_DATA_2025-11-18_1859.csv'
-output_file = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/Redcap_reports/Q1K/Q1KDatabase-ECNvocabularyscaleds_DATA_2025-11-18_1859_cleaned.csv'
+input_file = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/REDCAP_REPORTS/Q1K/Q1KDatabase-ECNvocabularyscaleds_DATA_2025-11-18_1859.csv'
+output_file = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/REDCAP_REPORTS/Q1K/Q1KDatabase-ECNvocabularyscaleds_DATA_2025-11-18_1859_cleaned.csv'
 
 # Read the CSV file
 print(f'Reading data from: {input_file}')

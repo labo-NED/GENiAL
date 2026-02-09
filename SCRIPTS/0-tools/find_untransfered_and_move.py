@@ -9,11 +9,11 @@ import shutil
 from pathlib import Path
 
 # Input paths
-all_files_list = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/all_2s_eeg_list.txt'
-transferred_files_list = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/transferred_eeg_list.txt'
+all_files_list = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/all_2s_eeg_list.txt'
+transferred_files_list = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/transferred_eeg_list.txt'
 
 # Output paths
-missing_files_output = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/untransferred_eeg_list.txt'
+missing_files_output = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/untransferred_eeg_list.txt'
 
 # Source and destination directories (UPDATE THESE PATHS AS NEEDED)
 source_dir = '/Volumes/NED_Backup3/COMBINED_Q1K_BC_2s/curated_list_for_genial_2s'  # Where the 2s files are currently stored

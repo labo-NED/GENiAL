@@ -777,17 +777,17 @@ if __name__ == "__main__":
     # PATHS & CONTSTANTS 
     # ------------------------------------------------------------
     TIMESTAMP = "DEC_05_2025"
-    ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN"
-    OUTPUT_FILE_PATH = ROOT_DIR + f"/DATA/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_{TIMESTAMP}.csv"
+    ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL"
+    OUTPUT_FILE_PATH = ROOT_DIR + f"/DATA/OUTPUTS/Preprocessed/Q1K_CHU_MHC_BC_DATA_{TIMESTAMP}.csv"
 
     # Input file path
     ## Q1K
-    Q1K_input_file = ROOT_DIR + "/DATA/Redcap_reports/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-07_1050.csv"
-    Q1K_beh_iq_file = ROOT_DIR + "/DATA/Redcap_reports/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-11-07_1050.csv"
+    Q1K_input_file = ROOT_DIR + "/DATA/REDCAP_REPORTS/Q1K/Q1KDatabase-ECNDEMEEGDIABEHIQGEN_DATA_2025-11-07_1050.csv"
+    Q1K_beh_iq_file = ROOT_DIR + "/DATA/REDCAP_REPORTS/Q1K/Q1KDatabase-ECNBEHAVIORALVERBALI_DATA_2025-11-07_1050.csv"
     
     ## Brain Canada
-    BC_data_file = ROOT_DIR + "/DATA/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-25_1220.csv"
-    BC_diagnosis_file = ROOT_DIR + "/DATA/Redcap_reports/BrainCanada/NeurodevelopmentAsso-ECNDiagnostics_DATA_2025-11-10_1614.csv"
+    BC_data_file = ROOT_DIR + "/DATA/REDCAP_REPORTS/BrainCanada/NeurodevelopmentAsso-ECNBCSRSIQ_DATA_2025-11-25_1220.csv"
+    BC_diagnosis_file = ROOT_DIR + "/DATA/REDCAP_REPORTS/BrainCanada/NeurodevelopmentAsso-ECNDiagnostics_DATA_2025-11-10_1614.csv"
     # BC_genetic_file = ""
     
     # Extract specific columns & merge behavioral/iq scores

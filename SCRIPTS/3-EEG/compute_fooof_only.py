@@ -26,8 +26,8 @@ IS_LOCAL = False  # Set to True for local runs, False for cluster runs
 
 if IS_LOCAL:
     # Locally - no parallelization
-    input_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/EEG'
-    output_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_fooof_aperiodic'
+    input_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/EEG'
+    output_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/eeg_fooof_aperiodic'
     os.makedirs(output_dir, exist_ok=True)
 else:
     # Cluster

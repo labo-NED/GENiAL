@@ -17,7 +17,7 @@ library(tibble)
 
 ########################## Import dataset ############################
 # CLUSTERS WITH SOM (+ CONTROLS)
-original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_16_2025.csv")
+original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_16_2025.csv")
 
 og_dataset_copy <- original_dataset # Make a copy for preprocessing
 
@@ -145,7 +145,7 @@ pie_chart <- ggplot(diag_counts, aes(x = 1, y = count, fill = diagnosis_group)) 
 
 # Save pie chart as PNG with fixed aspect ratio for the chart portion
 ggsave(
-  filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/diagnosis_pie_chart_full_sample.png"),
+  filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/diagnosis_pie_chart_full_sample.png"),
   plot = pie_chart,
   width = 8,
   height = 6,
@@ -228,7 +228,7 @@ for (cl in clusters) {
 
   # Save pie chart as PNG with fixed aspect ratio for the chart portion
   ggsave(
-    filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_pie_chart_cluster_", cl, ".png"),
+    filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/diagnosis_pie_chart_cluster_", cl, ".png"),
     plot = pie_chart,
     width = 8,
     height = 6,
@@ -349,13 +349,13 @@ diagnosis_freq_wide <- diagnosis_freq_by_cluster %>%
 # Save frequency tables
 write.csv(
   diagnosis_freq_by_cluster,
-  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_by_cluster_long.csv",
+  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/diagnosis_frequency_by_cluster_long.csv",
   row.names = FALSE
 )
 
 write.csv(
   diagnosis_freq_wide,
-  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_by_cluster_wide.csv",
+  file = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/diagnosis_frequency_by_cluster_wide.csv",
   row.names = FALSE
 )
 
@@ -399,7 +399,7 @@ for (cl in levels(og_dataset_copy$cluster)) {
       scale_y_continuous(expand = expansion(mult = c(0, 0.15)))
     
     ggsave(
-      filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_cluster_", cl, ".png"),
+      filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/diagnosis_frequency_cluster_", cl, ".png"),
       plot = p,
       width = 10,
       height = 6,
@@ -434,7 +434,7 @@ diagnosis_freq_matrix <- diagnosis_freq_by_cluster %>%
 # Create heatmap
 library(pheatmap)
 
-pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Clustered/diagnosis_frequency_heatmap.pdf", 
+pdf("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/diagnosis_frequency_heatmap.pdf", 
     width = 8, height = 10)
 pheatmap(
   diagnosis_freq_matrix,

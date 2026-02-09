@@ -11,7 +11,7 @@ library(dplyr)
 # 1. Load database
 # =================
 # (Keep your file path exactly as is)
-database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/Final/merged_clustered_EEG_features_global_RSRio_DEC_16_2025_logtransformed.csv"
+database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Final/merged_clustered_EEG_features_global_RSRio_DEC_16_2025_logtransformed.csv"
 db <- read.csv(database_filepath)
 db_copy <- db
 

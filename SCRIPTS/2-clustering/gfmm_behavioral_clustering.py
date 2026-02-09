@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 # ------------------------------------------------------------
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
-ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA"
-INPUT_FILE = ROOT_DIR + "/Outputs/Preprocessed/Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"
-OUTPUT_FILE = ROOT_DIR + "/Outputs/Clustered/clustered_GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026.csv"
-SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026_silhouette_scores.png"
-RADAR_PLOTS_FILE = ROOT_DIR + "/Outputs/Plots/GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026_cluster_radars.png"
+ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA"
+INPUT_FILE = ROOT_DIR + "/OUTPUTS/Preprocessed/Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"
+OUTPUT_FILE = ROOT_DIR + "/OUTPUTS/Clustered/clustered_GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026.csv"
+SILHOUETTE_PLOTS_FILE = ROOT_DIR + "/OUTPUTS/Plots/GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026_silhouette_scores.png"
+RADAR_PLOTS_FILE = ROOT_DIR + "/OUTPUTS/Plots/GMM_Q1K_CHU_MHC_BC_DATA_FEB_03_2026_cluster_radars.png"
 
 BEHAVIORAL_VARS = [
     'SRS_social_cognition_tscore',

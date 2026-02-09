@@ -23,7 +23,7 @@ categorical_freq_output.txt
 FINAL_DATABASE_USED_IN_R_GMM.csv
 
 # New clean repo
-CLEAN/Data/*
-CLEAN/scripts/__pycache__
+DATA/*
+scripts/__pycache__
 
 ARCHIVED/*

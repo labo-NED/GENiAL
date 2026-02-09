@@ -1,17 +1,21 @@
 # GENiAL
-Genetic and EEG-based Neurodevelopmental Analysis in Autism via Learning algorithms  
+(Genetic and) EEG-based Neurodevelopmental Analysis in Autism/ADHD via Learning algorithms  
+
+**[NEW/REVISED TITLE]** Behavioral Clustering and Resting-state EEG signatures of Neurodevelopmental Profiles Using Machine Learning
+
 This repository includes the necessary code for the GENiAL project:  
 * _Question._ In children with autism spectrum disorder, can machine learning applied to EEG data differentiate those with copy number variant (CNV) risks from those without?
-* _Objectives._ The primary objective of the study is to determine if CNV variants play a mediating role in delineations of EEG-based clusters amongst individuals diagnosed ASD.
+* _Objectives._ The primary objective of the study is to determine if machine learning can 
 * _Data._ Q1K + Brain Canada
 
-## Create a virtual environment
+## Dependencies
+### Create a virtual environment
 ```python3 -m venv venv```
 
-## Activate Virtual Environment
+### Activate virtual environment
 ```source venv/bin/activate```  
 
-## Install packages
+### Install packages
 ```pip install matplotlib mne pandas```
 
 _Select interpreter_  
@@ -21,27 +25,64 @@ _Select interpreter_
 
 # Steps
 
-## STEP 0 - Clean and prepare database
-1. Import `ECN-EEG-IQ-GEN-CHUSJ` from REDCap.
-2. Save it in your `/Data` folder.
-3. Run all sections of `GENiAL_STEP0_prep_files.ipynb` until `Prep for CNV`.
-4. Run the `Prep for CNV`. This section will prepare the files you will need to input to the online CNV calculator.
-5. Save the CNV outputs to the `/Data/Genetics/CNV-Output` folder.
-6. Run the last section of `GENiAL_STEP0_prep_files.ipynb`.
+## STEP 1 - Clean and prepare database
+1. Import REDCap reports:
+   - Q1K: `ECN-EEG-IQ-GEN-CHUSJ` and `ECNBEHAVIORALVERBALI` from REDCap
+   - Brain Canada: `ECNBCSRSIQ` and `ECNDiagnostics` from REDCap
+2. Save all REDCap exports in `/DATA/REDCAP_REPORTS/` (organized by Q1K and BrainCanada subfolders).
+3. Prepare CNV files (if needed):
+   - Extract CNV information from REDCap data (chromosome, boundaries, genome version)
+   - Prepare files for the online CNV calculator at https://cnvprediction.urca.ca/index.html
+   - Save CNV outputs to `/DATA/Genetic_cnv_scores/` folder
+4. Run `SCRIPTS/1-initial-cleanup/preprocess_demog_beh_iq_gen.py`:
+   - This script combines demographic, behavioral, IQ, and genetic data from Q1K and Brain Canada
+   - Output: Preprocessed CSV file saved in `/DATA/OUTPUTS/Preprocessed/`
 
-_EEG PREPROCESSING_
+### EEG PREPROCESSING
 1. Gather Raw EEGs and save on a HARD DRIVE.
-2. Follow HAPPE preprocessing pipeline from [lab's repository]{https://github.com/labo-NED/EEG_preprocessing_pipeline}.
-2.1 Run preprocessing with 2s parameters (for all power feature extraction).
-2.2 Run preprocessing with 5s parameters (needed for entropy feature extraction).  
-*NOTE* _This preprocessing step might take 4 days for each preprocessing (2s and 5s)._
-3. Run `MATLAB/feature_extraction.m` in MATLAB. This will extract power features.
-4. Run `TODO` in MATLAB. This will extract entropy features.
-5. RUN `MATLAB/roi_features_to_csv.m` in MATLAB. This concatenates features per subject and ROIs.  
-*NOTE* _The final CSV data is saved in "TO DO"._
+2. Follow HAPPE preprocessing pipeline from [lab's repository](https://github.com/labo-NED/EEG_preprocessing_pipeline):
+   - Run preprocessing with 2s parameters (for power feature extraction)
+   - Run preprocessing with 5s parameters (for entropy/complexity feature extraction)  
+   *NOTE* _This preprocessing step might take 4 days for each preprocessing (2s and 5s)._
+3. Extract EEG features (choose one method):
+   - **Python**: Run `SCRIPTS/3-EEG/compute_features.py` (extracts both 2s and 5s features)
+   - **MATLAB**: Run `SCRIPTS/3-EEG/Matlab/compute_features.m` (extracts both 2s and 5s features)
+   - Both scripts extract power features from 2s epochs and entropy/complexity features from 5s epochs
+4. Aggregate features:
+   - **By ROI**: Run `SCRIPTS/3-EEG/aggregate_features_by_roi.py` (aggregates features by brain regions)
+   - **Global**: Run `SCRIPTS/3-EEG/aggregate_features_global.py` (averages features across all channels)
+   - Output: Aggregated CSV files saved in `/DATA/OUTPUTS/eeg_features/`
 
-## STEP 1 - Preprocessing
-1. Combine EEG and demog/diag data.
+## STEP 2 - Behavioral Clustering
+1. Run behavioral clustering on preprocessed data:
+   - **SOM clustering**: Run `SCRIPTS/2-clustering/SOM_behavioral_clustering.py`
+   - **GFMM clustering**: Run `SCRIPTS/2-clustering/gfmm_behavioral_clustering.py`
+   - Output: Clustered CSV files saved in `/DATA/OUTPUTS/Clustered/`
+
+## STEP 3 - Merge EEG and Behavioral Data
+1. Merge EEG features with clustered behavioral data:
+   - Run `SCRIPTS/3-EEG/merge_eeg_features_to_db.py` (for global features)
+   - Run `SCRIPTS/3-EEG/merge_5s_features_to_db.py` (for 5s-specific features, if needed)
+   - Output: Merged CSV files saved in `/DATA/OUTPUTS/Final/`
+
+## STEP 4 - Statistical Analysis
+1. Run statistical analyses on merged behavioral and EEG data:
+   - **Main analysis**: Run `SCRIPTS/4-statistical-analysis/genial_stats.r`
+     - Performs ANCOVA for EEG features by cluster (controlling for age and sex)
+     - Log-transforms power band features for normality
+     - Generates boxplots with pairwise comparisons
+     - Computes inter-feature correlations
+     - Output: Statistical results and plots saved in `/DATA/OUTPUTS/Stats/`
+   - **Diagnosis pie charts**: Run `SCRIPTS/4-statistical-analysis/diagnosis_pie_charts.r`
+     - Creates diagnostic distribution pie charts by cluster
+   - **Behavioral scores plots**: Run `SCRIPTS/4-statistical-analysis/generate_behavioral_scores_plot.r`
+     - Generates visualizations of behavioral scores by cluster
+   - **Additional analyses**: Run `SCRIPTS/4-statistical-analysis/stats.r` for comprehensive analyses including:
+     - MANCOVA for behavioral measures
+     - Demographic comparisons between clusters
+     - EEG feature ANOVAs
+     - Regression analyses (SRS/ADHD ~ EEG features)
+     - Correlation analyses
 
 # Database
 
@@ -73,7 +114,7 @@ _EEG PREPROCESSING_
 - F = Father
 - S = Sibling
 - P = Proband
-- O = Other (GM)
+- O = Other (e.g., Grand-Mother)
 - C = Child
 
 ## Renamed columns
@@ -99,8 +140,7 @@ _EEG PREPROCESSING_
 - One participant excluded for Hg18 genome version (cannot calculate CNV related risk).
 - One participant excluded for lack of START/STOP boundary info (Turner only).
 
-## Demographic Data Mapping
-The `Scripts/clean_demographics.py` script cleans and transforms the raw demographic data from `Data/Q1KDatabase-ECNDEMOG_DATA.csv`. The following mappings are applied.
+## Demographic Data Mapping (Q1K)
 
 ### Relation to Proband (`relation_to_proband`)
 | Code | Description      |

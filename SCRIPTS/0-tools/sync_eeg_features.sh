@@ -3,11 +3,11 @@
 set -euo pipefail
 
 # Paths
-HD_LIST="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/eeg_features_on_HD.txt"
-LOCAL_LIST="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/eeg_features_on_local.txt"
+HD_LIST="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/eeg_features_on_HD.txt"
+LOCAL_LIST="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/eeg_features_on_local.txt"
 
 SRC_DIR="/Volumes/NED_Backup3/Q1K_BC_EEG_features/Q1K_BC_EEG_features"
-DEST_DIR="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/Outputs/eeg_features"
+DEST_DIR="/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/eeg_features"
 
 echo "Source directory: $SRC_DIR"
 echo "Destination directory: $DEST_DIR"

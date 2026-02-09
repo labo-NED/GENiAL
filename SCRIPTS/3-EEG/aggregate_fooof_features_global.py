@@ -17,9 +17,9 @@ from pathlib import Path
 IS_LOCAL = False  # Set to True for local runs, False for cluster runs
 
 if IS_LOCAL:
-    root_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/'
-    features_dir = os.path.join(root_dir, 'Outputs/eeg_fooof_aperiodic')
-    output_file = os.path.join(root_dir, 'Outputs/eeg_fooof_aperiodic/Q1K_BC_aggregated_FOOOF_features_global.csv')
+    root_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/'
+    features_dir = os.path.join(root_dir, 'OUTPUTS/eeg_fooof_aperiodic')
+    output_file = os.path.join(root_dir, 'OUTPUTS/eeg_fooof_aperiodic/Q1K_BC_aggregated_FOOOF_features_global.csv')
 else:
     root_dir = '/home/emmacona/links/projects/def-lippes/emmacona'
     features_dir = os.path.join(root_dir, 'Q1K_BC_HAPPEv3_ICA/Features')

@@ -1,6 +1,6 @@
-### AGGREGATE EEG FEATURES GLOBALLY (GENiAL PROJECT)
-# This script reads individual feature CSV files and aggregates them by averaging across all channels
-# Output: Single CSV with one row per participant-condition, columns for each feature (averaged globally)
+### AGGREGATE EEG FEATURES BY ROI (GENiAL PROJECT)
+# This script reads individual feature CSV files and aggregates them by ROI
+# Output: Single CSV with one row per participant-condition, columns for each feature x ROI combination
 # Note: 2s and 5s epoch data are merged horizontally (complementary features combined)
 #       Features are suffixed with _2s or _5s to distinguish them
 #
@@ -15,13 +15,26 @@ from pathlib import Path
 # # ------------ Paths ------------
 # root_dir = '/home/emmacona/projects/def-lippes/emmacona'
 # features_dir = os.path.join('/scratch/emmacona/Q1K_BC_EEG_features')
-# output_file = os.path.join(root_dir, 'Q1K_BC_EEG_features', 'Q1K_BC_aggregated_EEG_features_global.csv')
+# output_file = os.path.join(root_dir, 'Q1K_BC_EEG_features', 'Q1K_BC_aggregated_EEG_features_by_roi.csv')
 
 # Locally
-root_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/CLEAN/DATA/'
-features_dir = os.path.join(root_dir, 'Outputs/eeg_features')
-output_file = os.path.join(root_dir, 'Outputs/eeg_features/Q1K_BC_aggregated_EEG_features_global.csv')
+root_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/'
+features_dir = os.path.join(root_dir, 'OUTPUTS/eeg_features')
+output_file = os.path.join(root_dir, 'OUTPUTS/eeg_features/Q1K_BC_aggregated_EEG_features_by_roi.csv')
 
+
+# ------------ ROI Mapping ------------
+# Map ROI names to electrode numbers as strings
+# Channels in CSV files are converted from float to int to string (e.g., 1.0 -> '1', 124.0 -> '124')
+rois = {
+    'F': ['3', '4', '9', '11', '16', '19', '22', '23', '124', '24'],  # Frontal
+    'Cz': ['6', '13', '30', '37', '87', '105', '112'],  # Central
+    'TR': ['103', '104', '111', '116', '117', '122', '123'],  # Temporal Right
+    'TL': ['27', '28', '29', '33', '34', '36', '41'],  # Temporal Left
+    'PR': ['92', '96', '97', '98', '102', '108', '100', '95'],  # Parietal Right
+    'PL': ['45', '46', '47', '51', '52', '58', '57', '64'],  # Parietal Left
+    'Oz': ['60', '67', '72', '77', '85', '70', '75', '83']  # Occipital
+}
 
 # ------------ Helper Functions ------------
 
@@ -118,8 +131,7 @@ def extract_participant_id(filename):
             if len(parts) > 4:
                 # Add suffixes like S1, V1, P, etc.
                 participant_id += '_' + '_'.join(parts[4:])
-            condition = 'RSRio'  # All Brain Canada files are RSRio
-    
+            condition = 'RSRio'  # Brain Canada files are all RSRio
     # Fallback: use the whole base_name
     if participant_id is None:
         participant_id = base_name
@@ -127,15 +139,16 @@ def extract_participant_id(filename):
     return participant_id, condition, epoch_type
 
 
-def load_and_aggregate_features(csv_file):
+def load_and_aggregate_features(csv_file, rois):
     """
-    Load a feature CSV file and aggregate by averaging across all channels.
+    Load a feature CSV file and aggregate by ROI.
     
     Args:
         csv_file: Path to features_avg_*.csv file
+        rois: Dictionary mapping ROI names to lists of channel IDs
     
     Returns:
-        Dictionary with aggregated features (one value per feature, averaged globally)
+        Dictionary with aggregated features by ROI
     """
     # Load CSV
     df = pd.read_csv(csv_file)
@@ -158,15 +171,21 @@ def load_and_aggregate_features(csv_file):
     # Get feature columns (all except 'channel')
     feature_cols = [col for col in df.columns if col != 'channel']
     
-    if len(feature_cols) == 0:
-        print(f"Warning: No feature columns found in {csv_file}")
-        return None
-    
     aggregated = {}
     
-    # For each feature, compute the mean across all channels
-    for feature in feature_cols:
-        aggregated[feature] = df[feature].mean()
+    # For each ROI, average features across channels in that ROI
+    for roi_name, channel_list in rois.items():
+        # Filter rows for channels in this ROI
+        roi_data = df[df['channel'].isin(channel_list)]
+        
+        if len(roi_data) == 0:
+            print(f"Warning: No channels found for ROI {roi_name} in {csv_file}")
+            continue
+        
+        # Average each feature across channels in this ROI
+        for feature in feature_cols:
+            col_name = f"{feature}_{roi_name}"
+            aggregated[col_name] = roi_data[feature].mean()
     
     return aggregated
 
@@ -175,7 +194,7 @@ def load_and_aggregate_features(csv_file):
 
 def main():
     print("="*60)
-    print("EEG FEATURE AGGREGATION (GLOBAL AVERAGE)")
+    print("EEG FEATURE AGGREGATION BY ROI")
     print("="*60)
     print(f"\nFeatures directory: {features_dir}")
     print(f"Output file: {output_file}\n")
@@ -207,7 +226,7 @@ def main():
         print(f"  Participant: {participant_id}, Condition: {condition}, Epoch type: {epoch_type}")
         
         # Load and aggregate features
-        aggregated = load_and_aggregate_features(csv_file)
+        aggregated = load_and_aggregate_features(csv_file, rois)
         
         if aggregated is None or len(aggregated) == 0:
             print(f"  Warning: No features aggregated, skipping")
@@ -223,7 +242,7 @@ def main():
         row_data.update(aggregated)
         
         all_data.append(row_data)
-        print(f"  Aggregated {len(aggregated)} features (global average)")
+        print(f"  Aggregated {len(aggregated)} feature x ROI combinations")
         print()
     
     # Convert to DataFrame
@@ -250,7 +269,7 @@ def main():
     feature_cols = [col for col in df_all.columns if col not in metadata_cols]
     
     # Add epoch_type suffix to feature columns to distinguish 2s vs 5s features
-    # This creates columns like: alpha_power_2s, alpha_power_5s
+    # This creates columns like: alpha_power_F_2s, alpha_power_F_5s
     rows_with_suffix = []
     for _, row in df_all.iterrows():
         new_row = {
@@ -312,5 +331,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
