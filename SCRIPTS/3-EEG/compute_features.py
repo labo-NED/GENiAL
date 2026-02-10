@@ -30,13 +30,13 @@ SKIP_PROCESSED = False # Set to True if want to skip files that already have out
 
 # ------------ Paths ------------
 # Detect if running locally (if root_dir points to external volume)
-IS_LOCAL = False  # Set to True for local runs, False for cluster runs
+IS_LOCAL = True  # Set to True for local runs, False for cluster runs
 
 if IS_LOCAL:
     # Locally - no parallelization
-    dir_2s = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/EEG'
+    dir_2s = '/Volumes/LaCie/Q1K-EMMA/Q1K_BC_HAPPEv3_ICA/2s_epochs'
     dir_5s = ''  # Not used
-    output_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/eeg_features'
+    output_dir = '/Volumes/LaCie/Q1K-EMMA/Q1K_BC_HAPPEv3_ICA/2s_epochs/features'
     os.makedirs(output_dir, exist_ok=True)
 else:
     # Cluster
