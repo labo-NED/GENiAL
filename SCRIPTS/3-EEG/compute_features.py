@@ -95,13 +95,13 @@ excluded_chans = ['48','119','43','49','56','63','68','73','81','88','94','99','
 included_chans = [str(idx) for idx in range(1, 130) if str(idx) not in excluded_chans]
 
 # ---------- CONSTANTS ----------
-FREQ_BANDS = {'delta': [1,4],
-              'theta': [4,8],
-              'alpha': [8,13],
-              'beta': [13,30],
-              'gamma': [30,80],
-              'low_gamma': [30,59], 
-              'high_gamma': [61,80]}
+FREQ_BANDS = {'delta': [1,3.9],
+              'theta': [4,7.9],
+              'alpha': [8,12.9],
+              'beta': [13,29.9],
+              'gamma': [30,79.9],
+              'low_gamma': [30,56.9],
+              'high_gamma': [63,80]}
 
 # ---------- HELPER FUNCTIONS ----------
 # function to compute mse
@@ -171,7 +171,7 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
             # FOOOF features (periodic bands, offset, and exponent)
             print('\nExtracting FOOOF features...')
             previous_time = time.time()
-            spec = epochs_short.compute_psd(method='welch', fmin=0.5, fmax=80, n_jobs=n_cores) # compute PSD on epoched data
+            spec = epochs_short.compute_psd(method='welch', fmin=1, fmax=80, n_jobs=n_cores) # compute PSD on epoched data
             freqs = spec.freqs
             powers = spec.get_data()
             
@@ -180,10 +180,17 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
             
             # Fit FOOOF on average PSD
             fg = FOOOFGroup(min_peak_height=0.1, peak_width_limits=(1,12))
-            fg.fit(freqs, avg_powers, freq_range=[0.5,80], n_jobs=n_cores)
+            fg.fit(freqs, avg_powers, freq_range=[1,80], n_jobs=n_cores)
             
             # Extract aperiodic parameters and periodic spectrum from average fit
             aper_params_avg = fg.get_params('aperiodic')  # (n_chans, 2) - offset and exponent
+            aper_params_avg = np.array(aper_params_avg)  # Ensure it's a numpy array
+            
+            # Ensure correct shape: (n_chans, 2)
+            if aper_params_avg.shape != (n_chans, 2):
+                if aper_params_avg.size == n_chans * 2:
+                    aper_params_avg = aper_params_avg.reshape(n_chans, 2)
+            
             per_spec_avg = np.zeros((n_chans, len(freqs)))
             
             for ch in range(n_chans):
@@ -283,9 +290,17 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
             k += 1
             header += f'{feature},'
             try:
-                data_avg[k] = features[feature].mean(0) # average across segments
+                # Convert to numpy array and average across epochs
+                feature_data = np.asarray(features[feature])
+                # Handle both 2D (n_epochs, n_chans) and already 1D (n_chans) cases
+                if feature_data.ndim == 2:
+                    data_avg[k] = feature_data.mean(axis=0)  # average across epochs
+                elif feature_data.ndim == 1 and len(feature_data) == n_chans:
+                    data_avg[k] = feature_data  # already averaged
+                else:
+                    data_avg[k] = np.nan
             except:
-                data_avg[k] = np.nan # nan because not computed
+                data_avg[k] = np.nan
         header = header[:-1] # remove last comma
         np.savetxt(os.path.join(output_dir, f'features_avg_{output_base}.csv'), data_avg.T, delimiter=',', header=header, comments='')
     else:

@@ -18,9 +18,9 @@ from pathlib import Path
 # output_file = os.path.join(root_dir, 'Q1K_BC_EEG_features', 'Q1K_BC_aggregated_EEG_features_global.csv')
 
 # Locally
-root_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/'
-features_dir = os.path.join(root_dir, 'OUTPUTS/eeg_features')
-output_file = os.path.join(root_dir, 'OUTPUTS/eeg_features/Q1K_BC_aggregated_EEG_features_global.csv')
+root_dir = '/Volumes/LaCie/Q1K-EMMA/Q1K_BC_HAPPEv3_ICA'
+features_dir = os.path.join(root_dir, '2s_epochs/features')
+output_file = os.path.join(root_dir, '2s_epochs/features/Q1K_BC_aggregated_EEG_features_global.csv')
 
 
 # ------------ Helper Functions ------------

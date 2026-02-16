@@ -14,12 +14,12 @@ from pathlib import Path
 
 # ------------ Paths ------------
 # Toggle between local and cluster
-IS_LOCAL = False  # Set to True for local runs, False for cluster runs
+IS_LOCAL = True  # Set to True for local runs, False for cluster runs
 
 if IS_LOCAL:
-    root_dir = '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/'
-    features_dir = os.path.join(root_dir, 'OUTPUTS/eeg_fooof_aperiodic')
-    output_file = os.path.join(root_dir, 'OUTPUTS/eeg_fooof_aperiodic/Q1K_BC_aggregated_FOOOF_features_global.csv')
+    root_dir = '/Volumes/LaCie/Q1K-EMMA/Q1K_BC_HAPPEv3_ICA'
+    features_dir = os.path.join(root_dir, '2s_epochs/features')
+    output_file = os.path.join(root_dir, '2s_epochs/features/Q1K_BC_aggregated_FOOOF_features_global.csv')
 else:
     root_dir = '/home/emmacona/links/projects/def-lippes/emmacona'
     features_dir = os.path.join(root_dir, 'Q1K_BC_HAPPEv3_ICA/Features')
@@ -42,7 +42,7 @@ def extract_participant_id(filename):
     """
     # Remove path and extensions
     base_name = os.path.basename(filename)
-    base_name = base_name.replace('fooof_aperiodic_', '').replace('.pkl', '').replace('.csv', '')
+    base_name = base_name.replace('features_', '').replace('fooof_aperiodic_', '').replace('.pkl', '').replace('.csv', '')
     
     # Remove _2s or _5s suffix if present (FOOOF files are typically from 2s epochs)
     if base_name.endswith('_2s'):
@@ -160,14 +160,14 @@ def load_and_aggregate_fooof_features(pkl_file):
     
     # Aggregate FOOOF features by averaging across all channels
     aggregated = {
-        'fooof_offset_mean': offset.mean(),
-        'fooof_exponent_mean': exponent.mean(),
-        'fooof_offset_std': offset.std(),
-        'fooof_exponent_std': exponent.std(),
-        'fooof_offset_median': np.median(offset),
-        'fooof_exponent_median': np.median(exponent),
-        'n_channels': len(offset),
-        'n_epochs': results.get('n_epochs', np.nan)  # Store number of epochs too
+        'fooof_offset': offset.mean(),
+        'fooof_exponent': exponent.mean(),
+        # 'fooof_offset_std': offset.std(),
+        # 'fooof_exponent_std': exponent.std(),
+        # 'fooof_offset_median': np.median(offset),
+        # # 'fooof_exponent_median': np.median(exponent),
+        # 'n_channels': len(offset),
+        # 'n_epochs': results.get('n_epochs', np.nan)  # Store number of epochs too
     }
     
     return aggregated
@@ -230,8 +230,8 @@ def main():
         row_data.update(aggregated)
         
         all_data.append(row_data)
-        print(f"  Aggregated: offset_mean={aggregated['fooof_offset_mean']:.4f}, "
-              f"exponent_mean={aggregated['fooof_exponent_mean']:.4f}")
+        print(f"  Aggregated: offset_mean={aggregated['fooof_offset']:.4f}, "
+              f"exponent_mean={aggregated['fooof_exponent']:.4f}")
         print()
     
     # Convert to DataFrame
@@ -275,12 +275,11 @@ def main():
         print(df_all['condition'].value_counts(dropna=False))
     
     print("\nFOOOF Parameter Ranges:")
-    print(f"  Offset (mean):   [{df_all['fooof_offset_mean'].min():.4f}, {df_all['fooof_offset_mean'].max():.4f}]")
-    print(f"  Exponent (mean): [{df_all['fooof_exponent_mean'].min():.4f}, {df_all['fooof_exponent_mean'].max():.4f}]")
+    print(f"  Offset (mean):   [{df_all['fooof_offset'].min():.4f}, {df_all['fooof_offset'].max():.4f}]")
+    print(f"  Exponent (mean): [{df_all['fooof_exponent'].min():.4f}, {df_all['fooof_exponent'].max():.4f}]")
     
     print("\nFOOOF Parameter Statistics:")
-    print(df_all[['fooof_offset_mean', 'fooof_exponent_mean', 
-                   'fooof_offset_std', 'fooof_exponent_std']].describe())
+    print(df_all[['fooof_offset', 'fooof_exponent']].describe())
 
 
 if __name__ == "__main__":

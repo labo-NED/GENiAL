@@ -16,9 +16,6 @@ f_range = [1, 55];
 settings = struct('peak_width_limits', [0.5, 18], ...
     'max_n_peaks', 10);
 
-
-
-
 for sub = 1:length(names)
     id = names{sub};
     EEG = pop_loadset([directory,'\',id]);
@@ -100,28 +97,17 @@ for sub = 1:length(names)
 
         % periodic PSD as the area under the PSD curve
         periodic_PSD(sub,ch,1) = trapz(periodic_component(f1(1):f1(end)));
-
         periodic_PSD(sub,ch,2) = trapz(periodic_component(f2(1):f2(end)));
-
         periodic_PSD(sub,ch,3) = trapz(periodic_component(f3(1):f3(end)));
-
         periodic_PSD(sub,ch,4) = trapz(periodic_component(f4(1):f4(end)));
-
         periodic_PSD(sub,ch,5) = trapz(periodic_component(f5(1):55));
-
 
         % periodic PSD as the average
         periodic_PSD_m(sub,ch,1) = mean(periodic_component(f1(1):f1(end)));
-
         periodic_PSD_m(sub,ch,2) = mean(periodic_component(f2(1):f2(end)));
-
         periodic_PSD_m(sub,ch,3) = mean(periodic_component(f3(1):f3(end)));
-
         periodic_PSD_m(sub,ch,4) = mean(periodic_component(f4(1):f4(end)));
-
         periodic_PSD_m(sub,ch,5) = mean(periodic_component(f5(1):55));
-
-
 
     end
 
