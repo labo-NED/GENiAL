@@ -9,13 +9,13 @@ import os
 from datetime import datetime
 
 # Input file paths
-TIMESTAMP = "FEB_16_2026"
-EEG_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/eeg_features/Q1K_BC_aggregated_EEG_5s_features_global_DEC_16_2025.csv"
+TIMESTAMP = "FEB_18_2026"
+EEG_FEATURES_FILE = "/Volumes/LaCie/Q1K-EMMA/Q1K_BC_HAPPEv3_ICA/2s_epochs/features/Q1K_BC_aggregated_EEG_features_global.csv" # 2s file
 # FOOOF_FEATURES_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/eeg_features/Q1K_BC_aggregated_FOOOF_features_global.csv"
-ORIGNIAL_DATA_FILE = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"
+ORIGNIAL_DATA_FILE = "/Volumes/LaCie/Q1K-EMMA/Database/clustered_EEG_features_global_RSRio_FEB_18_2026.csv"
 
 # Output directory
-OUTPUT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS"
+OUTPUT_DIR = "/Volumes/LaCie/Q1K-EMMA/Database"
 
 def main():
     print("=" * 80)

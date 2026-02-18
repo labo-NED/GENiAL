@@ -34,8 +34,11 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'JAN_27_2026'
-database_filepath = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/merged_clustered_behavioral_EEG_features_global_RSRio_DEC_16_2025.csv"
+TIMESTAMP = 'FEB_18_2026'
+ROOT_DIR = '/Volumes/LaCie/Q1K-EMMA/'
+PLOTS_PATH = paste(ROOT_DIR, 'Plots/', sep='')
+DATABASE_PATH = paste(ROOT_DIR, 'Database/', sep='')
+database_filepath = paste(DATABASE_PATH, 'merged_clustered_behavioral_EEG_features_global_RSRio_FEB_18_2026.csv', sep='')
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
 
@@ -53,7 +56,7 @@ base_eeg_2s_features <- c('hurst_2s',
 absolute_band_power_features <- c('pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s')
 
 # only 2s features
-# base_eeg_features <- base_eeg_2s_features
+base_eeg_features <- base_eeg_2s_features
 
 ######################################################################
 ########################## Import dataset ############################
@@ -210,7 +213,7 @@ db_copy$ethnicity_recoded <- dplyr::case_when(
 db_copy$ethnicity_recoded <- factor(db_copy$ethnicity_recoded)
 
 # save updated database
-write.csv(db_copy, file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS", paste0("merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
+write.csv(db_copy, file.path("/Volumes/LaCie/Q1K-EMMA/Database/", paste0("merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
 
 
 ######################################################################
@@ -238,7 +241,7 @@ get_plot_range <- function(db, colname) {
   legend("topleft", legend = "Moyenne", col = "red", lty = 2)
 }
 
-pdf(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Stats/", paste0("scatter_plots_", analysis_label, "_", TIMESTAMP, ".pdf")))
+pdf(file.path(paste0(PLOTS_PATH, "scatter_plots_", analysis_label, "_", TIMESTAMP, ".pdf")))
 for (col in columns_to_plot) {
   if (col %in% names(db_copy)) {
     get_plot_range(db_copy, col)
@@ -260,7 +263,7 @@ normality_results <- data.frame(
 )
 
 # Create PDF for histograms with normal curve overlay
-pdf(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Stats/", paste0("histograms_", analysis_label, "_", TIMESTAMP, ".pdf")), width = 10, height = 7)
+pdf(file.path(paste0(PLOTS_PATH, "histograms_", analysis_label, "_", TIMESTAMP, ".pdf")), width = 10, height = 7)
 par(mfrow = c(2, 3))  # 2 rows, 3 columns layout
 
 for (var in columns_to_plot) {
@@ -336,7 +339,7 @@ par(mfrow = c(1, 1))  # Reset layout
 
 # Save normality results to CSV
 write.csv(normality_results, 
-          file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Stats/", paste0("normality_tests_", analysis_label, "_", TIMESTAMP, ".csv")),
+          file.path(paste0(PLOTS_PATH, "normality_tests_", analysis_label, "_", TIMESTAMP, ".csv")),
           row.names = FALSE)
 
 ####################################################################
@@ -349,7 +352,7 @@ covariates <- c("age_at_test", "sex")
 
 # --- Choose reference cluster --- #
 
-sink(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Stats/", paste0("behavioral_scores_table_", TIMESTAMP, ".txt")))
+sink(file.path(paste0(PLOTS_PATH, "behavioral_scores_table_", TIMESTAMP, ".txt")))
 
 # Compute average values by cluster for reference selection
 cat("\n========================================\n")
@@ -436,7 +439,7 @@ prepare_feature_data <- function(df, feat, verbose = TRUE) {
 }
 
 # ---- Feature-wise ANCOVA for each EEG feature ----#
-sink(file.path("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Stats/", paste0("EEG_features_statsmodel_summaries_", analysis_label, "_", TIMESTAMP, ".txt")))
+sink(file.path(paste0(PLOTS_PATH, "EEG_features_statsmodel_summaries_", analysis_label, "_", TIMESTAMP, ".txt")))
 results <- lapply(eeg_features, function(feat) {
   cat("\n======================\n")
   cat("Feature:", feat, "\n")
@@ -491,8 +494,7 @@ signif_feats <- results |>
   dplyr::pull(feature)
 
 sink(file.path(
-  "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Stats/",
-  paste0("EEG_features_statsmodel_summaries_SIGNIF_", analysis_label, "_", TIMESTAMP, ".txt")
+  paste0(PLOTS_PATH, "EEG_features_statsmodel_summaries_SIGNIF_", analysis_label, "_", TIMESTAMP, ".txt")
 ))
 
 for (feat in signif_feats) {
@@ -527,7 +529,7 @@ sink()
 
 
 # ---- BOX PLOTS ---- #
-out_dir <- "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Stats/"
+out_dir <- PLOTS_PATH
 
 # Open sink file for emmeans tables
 sink(file.path(out_dir,
