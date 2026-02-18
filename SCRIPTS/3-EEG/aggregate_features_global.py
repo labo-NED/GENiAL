@@ -10,6 +10,7 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+import pickle
 from pathlib import Path
 
 # # ------------ Paths ------------
@@ -30,16 +31,16 @@ def extract_participant_id(filename):
     Extract participant ID, condition, and epoch type from filename.
     
     Handles two formats:
-    - Q1K: Q1K_HSJ_1525_1192_P_RSRio_20250307_011113_5s.csv 
+    - Q1K: Q1K_HSJ_1525_1192_P_RSRio_20250307_011113_5s.pkl 
            -> (Q1K_HSJ_1525-1192_P, RSRio, 5s)
-    - Brain Canada: BC_2017_82437_889488_S1_V1_2s.csv 
+    - Brain Canada: BC_2017_82437_889488_S1_V1_2s.pkl 
                     -> (BC_889488_S1, None, 2s)
     
     Returns: (participant_id, condition, epoch_type)
     """
     # Remove path and extensions
     base_name = os.path.basename(filename)
-    base_name = base_name.replace('features_avg_', '').replace('.csv', '')
+    base_name = base_name.replace('features_', '').replace('.pkl', '')
     
     # Extract epoch type (2s or 5s)
     epoch_type = None
@@ -127,52 +128,54 @@ def extract_participant_id(filename):
     return participant_id, condition, epoch_type
 
 
-def load_and_aggregate_features(csv_file):
+def load_and_aggregate_features(pkl_file):
     """
-    Load a feature CSV file and aggregate by averaging across all channels.
+    Load a feature PKL file and aggregate by averaging across all channels.
     
     Args:
-        csv_file: Path to features_avg_*.csv file
+        pkl_file: Path to features_*.pkl file
     
     Returns:
         Dictionary with aggregated features (one value per feature, averaged globally)
     """
-    # Load CSV
-    df = pd.read_csv(csv_file)
-    
-    # Make sure 'channel' column exists
-    if 'channel' not in df.columns:
-        print(f"Warning: No 'channel' column in {csv_file}")
+    # Load PKL
+    try:
+        with open(pkl_file, 'rb') as f:
+            results = pickle.load(f)
+    except Exception as e:
+        print(f"Warning: Could not load {pkl_file}: {e}")
         return None
     
-    # Convert channel column: float -> int -> string
-    # e.g., 1.0 -> 1 -> '1', 124.0 -> 124 -> '124'
-    # Also handle 'E3' format if present
-    try:
-        # Try converting to float first (in case it's numeric), then to int, then to string
-        df['channel'] = df['channel'].astype(float).astype(int).astype(str)
-    except (ValueError, TypeError):
-        # If that fails, assume it's already string format and strip 'E' prefix
-        df['channel'] = df['channel'].astype(str).str.replace('^E', '', regex=True)
+    # Exclude metadata keys
+    metadata_keys = ['channel_list', 'filename', 'epoch_type']
+    feature_names = [key for key in results.keys() if key not in metadata_keys]
     
-    # Get feature columns (all except 'channel')
-    feature_cols = [col for col in df.columns if col != 'channel']
-    
-    if len(feature_cols) == 0:
-        print(f"Warning: No feature columns found in {csv_file}")
+    if len(feature_names) == 0:
+        print(f"Warning: No feature columns found in {pkl_file}")
         return None
     
     aggregated = {}
     
-    # For each feature, compute the mean across all channels
-    for feature in feature_cols:
-        aggregated[feature] = df[feature].mean()
+    # For each feature, compute the mean across all epochs and channels
+    for feature in feature_names:
+        try:
+            # Extract feature array
+            feature_data = results[feature]
+            
+            # Convert to numpy array if not already
+            feature_data = np.array(feature_data)
+            
+            # Average across all dimensions (epochs and channels)
+            # Features are stored as (n_epochs, n_chans) arrays
+            aggregated[feature] = feature_data.mean()
+        except Exception as e:
+            print(f"Warning: Could not aggregate feature {feature} from {pkl_file}: {e}")
+            aggregated[feature] = np.nan
     
     return aggregated
 
 
 # ------------ Main Processing ------------
-
 def main():
     print("="*60)
     print("EEG FEATURE AGGREGATION (GLOBAL AVERAGE)")
@@ -180,22 +183,22 @@ def main():
     print(f"\nFeatures directory: {features_dir}")
     print(f"Output file: {output_file}\n")
     
-    # Find all feature CSV files
-    csv_pattern = os.path.join(features_dir, 'features_avg_*.csv')
-    csv_files = glob.glob(csv_pattern)
+    # Find all feature PKL files
+    pkl_pattern = os.path.join(features_dir, 'features_*.pkl')
+    pkl_files = glob.glob(pkl_pattern)
     
-    if len(csv_files) == 0:
-        print(f"Error: No CSV files found matching pattern: {csv_pattern}")
+    if len(pkl_files) == 0:
+        print(f"Error: No PKL files found matching pattern: {pkl_pattern}")
         return
     
-    print(f"Found {len(csv_files)} feature CSV files\n")
+    print(f"Found {len(pkl_files)} feature PKL files\n")
     
     # Process each file
     all_data = []
     
-    for idx, csv_file in enumerate(csv_files, 1):
-        filename = os.path.basename(csv_file)
-        print(f"Processing {idx}/{len(csv_files)}: {filename}")
+    for idx, pkl_file in enumerate(pkl_files, 1):
+        filename = os.path.basename(pkl_file)
+        print(f"Processing {idx}/{len(pkl_files)}: {filename}")
         
         # Extract participant ID, condition, and epoch type
         participant_id, condition, epoch_type = extract_participant_id(filename)
@@ -207,7 +210,7 @@ def main():
         print(f"  Participant: {participant_id}, Condition: {condition}, Epoch type: {epoch_type}")
         
         # Load and aggregate features
-        aggregated = load_and_aggregate_features(csv_file)
+        aggregated = load_and_aggregate_features(pkl_file)
         
         if aggregated is None or len(aggregated) == 0:
             print(f"  Warning: No features aggregated, skipping")
