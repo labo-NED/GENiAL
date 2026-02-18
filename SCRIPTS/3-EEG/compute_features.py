@@ -179,13 +179,14 @@ for file_idx, (filepath, epoch_type) in enumerate(all_files):
             avg_powers = powers.mean(axis=0)  # average across epochs: (n_chans, n_freqs)
             
             # Fit FOOOF on average PSD
-            fg = FOOOFGroup(min_peak_height=0.1, peak_width_limits=(1,12))
+            fg = FOOOFGroup(peak_width_limits=(1,12))
             fg.fit(freqs, avg_powers, freq_range=[1,80], n_jobs=n_cores)
             
             # Extract aperiodic parameters and periodic spectrum from average fit
             aper_params_avg = fg.get_params('aperiodic')  # (n_chans, 2) - offset and exponent
             aper_params_avg = np.array(aper_params_avg)  # Ensure it's a numpy array
             
+            # Test - essaie de correction pour fooof features en CSV
             # Ensure correct shape: (n_chans, 2)
             if aper_params_avg.shape != (n_chans, 2):
                 if aper_params_avg.size == n_chans * 2:
