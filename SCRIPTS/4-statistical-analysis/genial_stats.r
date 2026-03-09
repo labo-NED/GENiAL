@@ -31,14 +31,15 @@ library(emmeans)
 library(ggsignif)
 library(ggplot2)
 
+
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'FEB_18_2026'
-ROOT_DIR = '/Volumes/LaCie/Q1K-EMMA/'
+TIMESTAMP = 'MAR_09_2026'
+ROOT_DIR = '/Volumes/LaCie/Q1K-EMMA/' # '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/'
 PLOTS_PATH = paste(ROOT_DIR, 'Plots/', sep='')
 DATABASE_PATH = paste(ROOT_DIR, 'Database/', sep='')
-database_filepath = paste(DATABASE_PATH, 'merged_clustered_behavioral_EEG_features_global_RSRio_FEB_18_2026.csv', sep='')
+database_filepath = paste(DATABASE_PATH, 'clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_09_2026.csv', sep='')
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
 
@@ -213,7 +214,7 @@ db_copy$ethnicity_recoded <- dplyr::case_when(
 db_copy$ethnicity_recoded <- factor(db_copy$ethnicity_recoded)
 
 # save updated database
-write.csv(db_copy, file.path("/Volumes/LaCie/Q1K-EMMA/Database/", paste0("merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
+write.csv(db_copy, file.path(paste0(DATABASE_PATH, "merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
 
 
 ######################################################################
@@ -407,7 +408,7 @@ cat("\n========================================\n\n")
 sink()
 
 # Set reference cluster for ANOVA models (change this to set a different reference)
-reference_cluster <- 1
+reference_cluster <- 3 # Most severe group
 
 # ---- Helper function to prepare data for analysis with participant exclusions ----#
 prepare_feature_data <- function(df, feat, verbose = TRUE) {

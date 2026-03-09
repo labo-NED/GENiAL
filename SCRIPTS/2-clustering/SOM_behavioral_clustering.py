@@ -10,10 +10,10 @@ import os
 # ------------------------------------------------------------
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
-TIMESTAMP = "FEB_03_2026"
+TIMESTAMP = "MAR_09_2026"
 
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA"
-INPUT_FILE = ROOT_DIR + "/OUTPUTS/Preprocessed/Q1K_CHU_MHC_BC_DATA_DEC_05_2025.csv"
+INPUT_FILE = ROOT_DIR + "/OUTPUTS/Final/FINAL_GENIAL_DB_without_cluster.csv"
 
 OUTPUT_FILE = ROOT_DIR + f"/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_{TIMESTAMP}.csv"
 RADAR_PLOTS_FILE = ROOT_DIR + f"/OUTPUTS/Plots/SOM_Q1K_CHU_MHC_BC_DATA_{TIMESTAMP}_cluster_radars.png"
@@ -94,7 +94,7 @@ gx = gy = side
 
 def fit_som(X, gx, gy, seed=42, iters=2000):
     som = MiniSom(x=gx, y=gy, input_len=X.shape[1],
-                  sigma=1.2, learning_rate=0.5, random_seed=seed)
+                  sigma=1.5, learning_rate=0.5, random_seed=seed) # Chosen from parameter optimization
     som.random_weights_init(X)
     som.train_random(X, num_iteration=iters, verbose=False)
     return som
@@ -138,7 +138,7 @@ lin = lambda ij: ij[0] * gy + ij[1]
 # Model selection over K using same SOM
 # -------------------------
 weights = som.get_weights().reshape(-1, p)   # (gx*gy) x p
-Ks = range(2, 9)
+Ks = range(3, 9)
 sil_vals = []
 stability_ari = []
 
@@ -172,7 +172,7 @@ plt.show()
 print(f"Saved selection curves plots: {SELECTION_CURVES_FILE}")
 
 best_k_sil = list(Ks)[int(np.argmax(sil_vals))]
-best_k = 4 # best_k_sil
+best_k = 4 #best_k_sil ## 4 is chosen as the largest number of clusters before significant drop in silhouette score
 print(f"Best K by silhouette: {best_k}")
 print("Silhouette curve:", [round(v, 3) for v in sil_vals])
 print("Stability ARI:", [round(v, 3) for v in stability_ari])
