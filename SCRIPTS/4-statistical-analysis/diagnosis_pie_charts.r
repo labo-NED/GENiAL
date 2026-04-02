@@ -16,9 +16,9 @@ library(stringr)
 library(tibble)
 
 ########################## Import dataset ############################
-TIMESTAMP = '3clusters_FEB_25_2026'
+TIMESTAMP = 'MAR_09_2026'
 # CLUSTERS WITH SOM (+ CONTROLS)
-original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_FEB_25_2026.csv")
+original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_09_2026.csv")
 
 og_dataset_copy <- original_dataset # Make a copy for preprocessing
 

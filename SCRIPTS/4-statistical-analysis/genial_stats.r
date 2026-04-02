@@ -35,7 +35,7 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'MAR_09_2026'
+TIMESTAMP = 'APR_02_2026'
 ROOT_DIR = '/Volumes/LaCie/Q1K-EMMA/' # '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/'
 PLOTS_PATH = paste(ROOT_DIR, 'Plots/', sep='')
 DATABASE_PATH = paste(ROOT_DIR, 'Database/', sep='')
@@ -43,9 +43,8 @@ database_filepath = paste(DATABASE_PATH, 'clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
 
-base_eeg_features <- c('hurst_2s', 
-                       'pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s', 'pow_beta_2s', 'pow_gamma_2s', 'pow_low_gamma_2s', 'pow_high_gamma_2s',
-                       'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s',
+base_eeg_features <- c('hurst_2s',
+                       'pow_per_delta_2s', 'pow_per_theta_2s', 'pow_per_alpha_2s', 'pow_per_beta_2s', 'pow_per_gamma_2s', 'pow_per_low_gamma_2s', 'pow_per_high_gamma_2s',
                        'fooof_exponent_2s','fooof_offset_2s',
                        'higuchi_fd_5s', 'katz_fd_5s',
                        'samp_entropy_5s', 'CI_5s', 'CI_lowscale_5s', 'CI_highscale_5s')
@@ -96,6 +95,7 @@ db_copy |>
     mean_age = mean(age_at_test, na.rm = TRUE),
     prop_male = mean(sex == "M", na.rm = TRUE)
   )
+
 
 ######################################################################
 ########################### Clean Up  ################################
@@ -215,6 +215,7 @@ db_copy$ethnicity_recoded <- factor(db_copy$ethnicity_recoded)
 
 # save updated database
 write.csv(db_copy, file.path(paste0(DATABASE_PATH, "merged_clustered_EEG_features_global_RSRio_", TIMESTAMP, "_logtransformed.csv")))
+
 
 
 ######################################################################
@@ -343,16 +344,16 @@ write.csv(normality_results,
           file.path(paste0(PLOTS_PATH, "normality_tests_", analysis_label, "_", TIMESTAMP, ".csv")),
           row.names = FALSE)
 
-####################################################################
-############################ ANOVA #################################
-####################################################################
+
+#################################################################
+############################ LM #################################
+#################################################################
 df <- db_copy
 df$cluster <- factor(df$cluster, levels = c(0, 1, 2, 3))
 df$sex <- factor(df$sex)
 covariates <- c("age_at_test", "sex")
 
 # --- Choose reference cluster --- #
-
 sink(file.path(paste0(PLOTS_PATH, "behavioral_scores_table_", TIMESTAMP, ".txt")))
 
 # Compute average values by cluster for reference selection
@@ -407,7 +408,7 @@ for (i in seq_len(nrow(cluster_means))) {
 cat("\n========================================\n\n")
 sink()
 
-# Set reference cluster for ANOVA models (change this to set a different reference)
+# Set reference cluster for LM models
 reference_cluster <- 3 # Most severe group
 
 # ---- Helper function to prepare data for analysis with participant exclusions ----#
@@ -439,7 +440,7 @@ prepare_feature_data <- function(df, feat, verbose = TRUE) {
   return(dat_feat)
 }
 
-# ---- Feature-wise ANCOVA for each EEG feature ----#
+# ---- LM for each EEG feature ----#
 sink(file.path(paste0(PLOTS_PATH, "EEG_features_statsmodel_summaries_", analysis_label, "_", TIMESTAMP, ".txt")))
 results <- lapply(eeg_features, function(feat) {
   cat("\n======================\n")
@@ -472,62 +473,17 @@ results <- lapply(eeg_features, function(feat) {
     form <- as.formula(paste(feat, "~ cluster + age_at_test + sex"))
   }
   
-  # Fit ANOVA
+  # Fit LM
   fit <- lm(form, data = dat_feat)
-  an <- anova(fit)
-  
   print(summary(fit))
   
-  # Extract the row of the cluster effect
-  p_val <- an["cluster", "Pr(>F)"]
-  
-  data.frame(
-    feature = feat,
-    p_value = p_val
-  )
 })
 sink()
-results <- bind_rows(results)
 
-# Table of significant features
-signif_feats <- results |>
-  dplyr::filter(!is.na(p_value) & p_value < 0.05) |>
-  dplyr::pull(feature)
 
-sink(file.path(
-  paste0(PLOTS_PATH, "EEG_features_statsmodel_summaries_SIGNIF_", analysis_label, "_", TIMESTAMP, ".txt")
-))
-
-for (feat in signif_feats) {
-  cat("\n======================\n")
-  cat("Feature:", feat, "\n")
-  cat("======================\n\n")
-  
-  dat_feat <- prepare_feature_data(df, feat, verbose = TRUE)
-  dat_feat$cluster <- droplevels(dat_feat$cluster)
-  dat_feat$sex     <- droplevels(dat_feat$sex)
-  
-  # Set reference cluster (only if the reference cluster exists in the data)
-  if (reference_cluster %in% levels(dat_feat$cluster)) {
-    dat_feat$cluster <- relevel(dat_feat$cluster, ref = as.character(reference_cluster))
-  }
-  
-  if (nlevels(dat_feat$sex) < 2) {
-    form <- as.formula(paste(feat, "~ cluster + age_at_test"))
-  } else {
-    form <- as.formula(paste(feat, "~ cluster + age_at_test + sex"))
-  }
-  
-  fit <- lm(form, data = dat_feat)
-  an  <- anova(fit)
-  
-  print(summary(fit))
-  cat("\nANOVA table:\n")
-  print(an)
-}
-
-sink()
-
+##################################################################
+################## Pairwise comparisons ##########################
+##################################################################
 
 # ---- BOX PLOTS ---- #
 out_dir <- PLOTS_PATH
@@ -676,6 +632,7 @@ dev.off()
 
 # Close sink file for emmeans tables
 sink()
+
 
 ######################################################################
 ####################### INTER-FEATURE CORRELATION ####################
