@@ -7,7 +7,7 @@ from sklearn.metrics import silhouette_score
 from minisom import MiniSom
 
 # Paths
-TIMESTAMP = "FEB_26_2026"
+TIMESTAMP = "APR_08_2026"
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA"
 INPUT_FILE = ROOT_DIR + "/OUTPUTS/Final/FINAL_GENIAL_DB.csv"
 SILHOUETTE_PLOT_FILE = ROOT_DIR + f"/OUTPUTS/Plots/{TIMESTAMP}_SOM_silhouette.png"

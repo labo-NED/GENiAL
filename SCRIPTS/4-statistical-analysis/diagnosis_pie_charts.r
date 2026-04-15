@@ -16,7 +16,7 @@ library(stringr)
 library(tibble)
 
 ########################## Import dataset ############################
-TIMESTAMP = 'MAR_09_2026'
+TIMESTAMP = 'APR_07_2026'
 # CLUSTERS WITH SOM (+ CONTROLS)
 original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_09_2026.csv")
 
@@ -67,14 +67,14 @@ og_dataset_copy$diagnosis_group <- sapply(og_dataset_copy$diagnosis, diagnosis_l
 # Do not enforce a fixed order for diagnosis groups
 og_dataset_copy$diagnosis_group <- factor(og_dataset_copy$diagnosis_group)
 
-# Custom color palette for diagnosis groups (more distinct colors)
+# Colorblind-safe palette (Okabe–Ito–style; works in print and grayscale with legend)
 diagnosis_colors <- c(
-  "ASD" = "#1976D2",              # deep blue
-  "ADHD" = "#E91E63",             # pink
-  "ASD + ADHD" = "#8E24AA",            # purple
-  "ADHD + ASD behavior" = "#BA68C8",   # light purple
-  "No diagnosis" = "#BDBDBD",          # light gray
-  "Other diagnosis" = "#757575"        # medium gray
+  "ASD" = "#0072B2",
+  "ADHD" = "#D55E00",
+  "ASD + ADHD" = "#CC79A7",
+  "ADHD + ASD behavior" = "#009E73",
+  "No diagnosis" = "#8A8A8A",
+  "Other diagnosis" = "#404040"
 )
 
 ########################## Diagnoses Pie Charts -- FULL sample ##########################
@@ -240,6 +240,61 @@ for (cl in clusters) {
   print(pie_chart)
 }
 
+########################## Stacked bar: all clusters (100% per bar) ##########################
+
+stacked_diag <- og_dataset_copy %>%
+  count(cluster, diagnosis_group, name = "count") %>%
+  group_by(cluster) %>%
+  mutate(
+    pct = count / sum(count) * 100,
+    label = ifelse(count > 0 & pct >= 9, paste0(count, "\n(", sprintf("%.0f", pct), "%)"), "")
+  ) %>%
+  ungroup() %>%
+  mutate(
+    cluster = factor(cluster, levels = levels(og_dataset_copy$cluster)),
+    diagnosis_group = factor(diagnosis_group, levels = levels(og_dataset_copy$diagnosis_group))
+  )
+
+stacked_bar_plot <- ggplot(stacked_diag, aes(x = cluster, y = count, fill = diagnosis_group)) +
+  geom_col(position = position_fill(reverse = TRUE), width = 0.65, color = "white", linewidth = 0.35) +
+  geom_text(
+    data = subset(stacked_diag, label != ""),
+    aes(label = label),
+    position = position_fill(reverse = TRUE, vjust = 0.5),
+    size = 7,
+    color = "white",
+    lineheight = 0.85
+  ) +
+  scale_y_continuous(
+    labels = function(x) paste0(round(x * 100), "%"),
+    expand = c(0, 0)
+  ) +
+  scale_x_discrete(
+    labels = function(x) paste("Cluster", as.numeric(as.character(x)) + 1L)
+  ) +
+  scale_fill_manual(values = diagnosis_colors, drop = FALSE) +
+  labs(
+    x = "Cluster",
+    y = "Proportion",
+    fill = "Diagnosis"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 18),
+    panel.grid.major.x = element_blank()
+  )
+
+ggsave(
+  filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Plots/", TIMESTAMP, "_diagnosis_stacked_bar_by_cluster.png"),
+  plot = stacked_bar_plot,
+  width = 9,
+  height = 6,
+  dpi = 300,
+  limitsize = FALSE
+)
+print(stacked_bar_plot)
+
 ########################## Diagnosis Frequency Analysis by Cluster ##########################
 
 # Function to parse all individual diagnoses from a diagnosis string
@@ -382,7 +437,7 @@ for (cl in levels(og_dataset_copy$cluster)) {
   
   if (nrow(cluster_diag) > 0) {
     p <- ggplot(cluster_diag, aes(x = reorder(diagnosis_label, count), y = count)) +
-      geom_col(fill = "#1976D2", alpha = 0.8) +
+      geom_col(fill = "#0072B2", alpha = 0.85) +
       geom_text(aes(label = paste0(count, " (", percentage, "%)")), 
                 hjust = -0.1, size = 3) +
       coord_flip() +
@@ -444,7 +499,7 @@ pheatmap(
   display_numbers = TRUE,
   number_format = "%.1f",
   main = "Diagnosis Frequency Heatmap by Cluster (%)",
-  color = colorRampPalette(c("white", "#1976D2"))(100),
+  color = colorRampPalette(c("#F7F7F7", "#B3CDE3", "#0072B2", "#004C8C"))(100),
   fontsize = 8,
   fontsize_row = 7,
   fontsize_col = 10

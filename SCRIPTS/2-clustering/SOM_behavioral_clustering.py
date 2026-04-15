@@ -10,7 +10,7 @@ import os
 # ------------------------------------------------------------
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
-TIMESTAMP = "MAR_09_2026"
+TIMESTAMP = "APR_08_2026"
 
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA"
 INPUT_FILE = ROOT_DIR + "/OUTPUTS/Final/FINAL_GENIAL_DB_without_cluster.csv"

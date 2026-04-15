@@ -58,6 +58,7 @@ absolute_band_power_features <- c('pow_delta_2s', 'pow_theta_2s', 'pow_alpha_2s'
 # only 2s features
 base_eeg_features <- base_eeg_2s_features
 
+
 ######################################################################
 ########################## Import dataset ############################
 ######################################################################
@@ -95,6 +96,7 @@ db_copy |>
     mean_age = mean(age_at_test, na.rm = TRUE),
     prop_male = mean(sex == "M", na.rm = TRUE)
   )
+
 
 
 ######################################################################
@@ -480,6 +482,52 @@ results <- lapply(eeg_features, function(feat) {
 })
 sink()
 
+# ---- LM for each behavioral measure (same model as EEG: cluster vs ref + age + sex) ----#
+behavioral_features <- c(
+  "SRS_restrictive_repetitive_tscore",
+  "SRS_social_communication_tscore",
+  "SRS_social_cognition_tscore",
+  "attention_deficit_hyperactivity_tscore",
+  "nonverbal_iq"
+)
+behavioral_features <- behavioral_features[behavioral_features %in% names(df)]
+
+sink(file.path(paste0(PLOTS_PATH, "behavioral_measures_statsmodel_summaries_", analysis_label, "_", TIMESTAMP, ".txt")))
+invisible(lapply(behavioral_features, function(feat) {
+  cat("\n======================\n")
+  cat("Behavioral measure:", feat, "\n")
+  cat("======================\n\n")
+
+  dat_feat <- prepare_feature_data(df, feat, verbose = TRUE)
+  dat_feat$cluster <- droplevels(dat_feat$cluster)
+  dat_feat$sex     <- droplevels(dat_feat$sex)
+
+  if (nlevels(dat_feat$cluster) < 2) {
+    cat("Skipped: cluster has fewer than 2 levels after NA removal\n")
+    return(invisible(NULL))
+  }
+
+  if (reference_cluster %in% levels(dat_feat$cluster)) {
+    dat_feat$cluster <- relevel(dat_feat$cluster, ref = as.character(reference_cluster))
+    cat("Reference cluster set to:", reference_cluster, "\n")
+  } else {
+    cat("Warning: Reference cluster", reference_cluster, "not present in data, using default reference\n")
+  }
+
+  if (nlevels(dat_feat$sex) < 2) {
+    cat("Warning: sex has only 1 level after NA removal, fitting model without sex\n")
+    form <- as.formula(paste(feat, "~ cluster + age_at_test"))
+  } else {
+    form <- as.formula(paste(feat, "~ cluster + age_at_test + sex"))
+  }
+
+  fit <- lm(form, data = dat_feat)
+  print(summary(fit))
+
+  invisible(NULL)
+}))
+sink()
+
 
 ##################################################################
 ################## Pairwise comparisons ##########################
@@ -634,6 +682,7 @@ dev.off()
 sink()
 
 
+
 ######################################################################
 ####################### INTER-FEATURE CORRELATION ####################
 ######################################################################
@@ -642,10 +691,17 @@ cat("\n\n######################################################################\
 cat("#################### EEG Feature Inter-Correlation ###################\n")
 cat("######################################################################\n\n")
 
-# Use the log-transformed and cleaned EEG features (as defined in your clean-up section)
-eeg_data_for_corr <- db_copy %>%
-  dplyr::select(all_of(eeg_features)) %>%
-  na.omit() # Remove any rows with NA in the selected features
+# Only these columns enter the inter-feature correlation (edit here; independent of eeg_features)
+corr_features <- c(
+  "hurst_2s",
+  "pow_per_delta_2s",
+  "pow_per_low_gamma_2s",
+  "pow_per_high_gamma_2s",
+  "higuchi_fd_5s"
+)
+corr_features <- corr_features[corr_features %in% names(db_copy)]
+
+eeg_data_for_corr <- na.omit(db_copy[, corr_features, drop = FALSE])
 
 cat(sprintf("Number of participants for correlation analysis: %d\n", nrow(eeg_data_for_corr)))
 
