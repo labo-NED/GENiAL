@@ -35,7 +35,7 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'APR_02_2026'
+TIMESTAMP = 'APR_17_2026'
 ROOT_DIR = '/Volumes/LaCie/Q1K-EMMA/' # '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/'
 PLOTS_PATH = paste(ROOT_DIR, 'Plots/', sep='')
 DATABASE_PATH = paste(ROOT_DIR, 'Database/', sep='')

@@ -16,7 +16,7 @@ library(stringr)
 library(tibble)
 
 ########################## Import dataset ############################
-TIMESTAMP = 'APR_07_2026'
+TIMESTAMP = 'APR_16_2026'
 # CLUSTERS WITH SOM (+ CONTROLS)
 original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_09_2026.csv")
 
@@ -69,12 +69,12 @@ og_dataset_copy$diagnosis_group <- factor(og_dataset_copy$diagnosis_group)
 
 # Colorblind-safe palette (Okabe–Ito–style; works in print and grayscale with legend)
 diagnosis_colors <- c(
-  "ASD" = "#0072B2",
-  "ADHD" = "#D55E00",
-  "ASD + ADHD" = "#CC79A7",
-  "ADHD + ASD behavior" = "#009E73",
-  "No diagnosis" = "#8A8A8A",
-  "Other diagnosis" = "#404040"
+  "ASD" = "#9E0142",
+  "ADHD" = "#F46D43",
+  "ASD + ADHD" = "#D53E4F",
+  "ADHD + ASD behavior" = "#FDAE61",
+  "Other diagnosis" = "#FEE08B",
+  "No diagnosis" = "#E0E0E0"
 )
 
 ########################## Diagnoses Pie Charts -- FULL sample ##########################
@@ -155,6 +155,7 @@ ggsave(
 )
 # Also display in RStudio/interactive session
 print(pie_chart)
+
 
 ########################## Pie Charts for Individual Clusters ##########################
 
@@ -240,8 +241,69 @@ for (cl in clusters) {
   print(pie_chart)
 }
 
-########################## Stacked bar: all clusters (100% per bar) ##########################
 
+
+########################## Pie + stacked bars summary ##########################
+
+# --- Pie chart for whole sample (same diagnosis colors) --- #
+overall_diag_counts <- og_dataset_copy %>%
+  count(diagnosis_group, name = "count") %>%
+  complete(diagnosis_group = levels(og_dataset_copy$diagnosis_group), fill = list(count = 0)) %>%
+  filter(count > 0) %>%
+  mutate(
+    perc = count / sum(count) * 100,
+    label = paste0(count, " (", sprintf("%.1f", perc), "%)")
+  ) %>%
+  arrange(desc(diagnosis_group)) %>%
+  mutate(
+    ymax = cumsum(count),
+    ymin = c(0, head(ymax, n = -1)),
+    mid = (ymax + ymin) / 2,
+    angle = 90 - 360 * (mid / sum(count)),
+    hjust = ifelse(angle < -90, 1, 0),
+    angle = ifelse(angle < -90, angle + 180, angle)
+  )
+
+overall_n <- nrow(og_dataset_copy)
+
+pie_chart_full <- ggplot(overall_diag_counts, aes(x = 1, y = count, fill = diagnosis_group)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y", start = 0) +
+  xlim(c(0.5, 1.5)) +
+  labs(
+    # title = paste0("All Participants (n = ", overall_n, ") - Diagnostic Distribution"),
+    fill = "Diagnosis"
+  ) +
+  theme_void(base_size = 16) +
+  theme(
+    legend.position = "left",
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 20),
+    # ~double line spacing between legend rows
+    legend.spacing.y = unit(1, "cm"),
+    legend.key.spacing.y = unit(0.6, "cm"),
+    legend.key.height = unit(0.8, "cm")
+  ) +
+  scale_fill_manual(values = diagnosis_colors, drop = FALSE)
+# geom_text(
+#   aes(y = mid, label = label, angle = angle, hjust = hjust),
+#   x = 1,
+#   size = 5,
+#   color = "black",
+#   inherit.aes = FALSE
+# )
+
+ggsave(
+  filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Plots/", TIMESTAMP, "_diagnosis_pie_chart_full_sample_summary.png"),
+  plot = pie_chart_full,
+  width = 8,
+  height = 6,
+  dpi = 300,
+  limitsize = FALSE
+)
+print(pie_chart_full)
+
+# --- Stacked bars across clusters (100% bars), flipped --- #
 stacked_diag <- og_dataset_copy %>%
   count(cluster, diagnosis_group, name = "count") %>%
   group_by(cluster) %>%
@@ -255,45 +317,129 @@ stacked_diag <- og_dataset_copy %>%
     diagnosis_group = factor(diagnosis_group, levels = levels(og_dataset_copy$diagnosis_group))
   )
 
-stacked_bar_plot <- ggplot(stacked_diag, aes(x = cluster, y = count, fill = diagnosis_group)) +
+stacked_bar_plot_100 <- ggplot(stacked_diag, aes(x = cluster, y = count, fill = diagnosis_group)) +
   geom_col(position = position_fill(reverse = TRUE), width = 0.65, color = "white", linewidth = 0.35) +
-  geom_text(
-    data = subset(stacked_diag, label != ""),
-    aes(label = label),
-    position = position_fill(reverse = TRUE, vjust = 0.5),
-    size = 7,
-    color = "white",
-    lineheight = 0.85
-  ) +
+  # geom_text(
+  #   data = subset(stacked_diag, label != ""),
+  #   aes(label = label),
+  #   position = position_fill(reverse = TRUE, vjust = 0.5),
+  #   size = 7,
+  #   color = "black",
+  #   lineheight = 0.85
+  # ) +
   scale_y_continuous(
-    labels = function(x) paste0(round(x * 100), "%"),
-    expand = c(0, 0)
+    labels = function(x) paste0(as.integer(round(x * 100)), "%"),
+    expand = expansion(mult = c(0.02, 0.02)),
+    position = "right"
   ) +
   scale_x_discrete(
-    labels = function(x) paste("Cluster", as.numeric(as.character(x)) + 1L)
+    labels = function(x) paste("Cluster", as.numeric(as.character(x)) + 1L),
+    expand = expansion(add = 0.15)
   ) +
   scale_fill_manual(values = diagnosis_colors, drop = FALSE) +
   labs(
-    x = "Cluster",
-    y = "Proportion",
-    fill = "Diagnosis"
+    x = NULL,
+    y = NULL
+    # fill = "Diagnosis"
   ) +
-  theme_minimal(base_size = 16) +
+  coord_flip() +
+  theme_minimal(base_size = 22) +
   theme(
-    legend.title = element_text(size = 18),
-    legend.text = element_text(size = 18),
-    panel.grid.major.x = element_blank()
+    legend.position = "none",
+    plot.margin = margin(12, 16, 12, 16),
+    # legend.title = element_text(size = 16),
+    # legend.text = element_text(size = 14),
+    panel.grid.major.y = element_blank(),
+    axis.text = element_text(size = 22),
+    axis.title = element_text(size = 24)
   )
 
 ggsave(
-  filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Plots/", TIMESTAMP, "_diagnosis_stacked_bar_by_cluster.png"),
-  plot = stacked_bar_plot,
-  width = 9,
+  filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Plots/", TIMESTAMP, "_diagnosis_stacked_bar_by_cluster_lipped.png"),
+  plot = stacked_bar_plot_100,
+  width = 10,
   height = 6,
   dpi = 300,
   limitsize = FALSE
 )
-print(stacked_bar_plot)
+print(stacked_bar_plot_100)
+
+# --- One bar graph for each diagnosis category (bars = clusters, length = count) --- #
+diag_by_cluster <- og_dataset_copy %>%
+  count(cluster, diagnosis_group, name = "count") %>%
+  complete(
+    cluster = levels(og_dataset_copy$cluster),
+    diagnosis_group = levels(og_dataset_copy$diagnosis_group),
+    fill = list(count = 0)
+  ) %>%
+  mutate(
+    cluster = factor(cluster, levels = levels(og_dataset_copy$cluster)),
+    diagnosis_group = factor(diagnosis_group, levels = levels(og_dataset_copy$diagnosis_group)),
+    cluster_label = factor(
+      paste("Cluster", as.numeric(as.character(cluster)) + 1L),
+      levels = paste("Cluster", seq_along(levels(og_dataset_copy$cluster)))
+    )
+  )
+
+diagnosis_levels <- levels(diag_by_cluster$diagnosis_group)
+
+for (i in seq_along(diagnosis_levels)) {
+  diag <- diagnosis_levels[i]
+  diag_data <- diag_by_cluster %>% filter(diagnosis_group == diag)
+
+  p_diag <- ggplot(diag_data, aes(x = count, y = cluster_label)) +
+    geom_col(
+      fill = diagnosis_colors[[as.character(diag)]],
+      width = 0.75,
+      color = "white",
+      linewidth = 0.35
+    ) +
+    labs(
+      x = NULL,
+      y = NULL,
+      # title = as.character(diag)
+    ) +
+    scale_x_continuous(
+      position = "bottom",
+      expand = expansion(mult = c(0, 0.04)),
+      breaks = scales::pretty_breaks(n = 3),
+      labels = scales::label_number(accuracy = 1, big.mark = "")
+    ) +
+    theme_minimal(base_size = 16) +
+    theme(
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.x = element_line(color = "grey80", linewidth = 0.6),
+      axis.text.y = element_text(size = 22, color = "black"),
+      axis.text.x = element_text(size = 22, color = "black"),
+      axis.ticks.x = element_line(color = "black", linewidth = 0.4),
+      axis.line.x.bottom = element_line(color = "black", linewidth = 0.7),
+      axis.line.y.left = element_line(color = "black", linewidth = 0.7),
+      # plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+    )
+
+  diag_filename <- gsub("[^A-Za-z0-9]+", "_", as.character(diag))
+  diag_filename <- gsub("^_|_$", "", diag_filename)
+
+  ggsave(
+    filename = paste0(
+      "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Plots/",
+      TIMESTAMP,
+      "_diagnosis_counts_by_cluster_",
+      tolower(diag_filename),
+      ".png"
+    ),
+    plot = p_diag,
+    width = 8,
+    height = 5,
+    dpi = 300,
+    limitsize = FALSE
+  )
+  print(p_diag)
+}
+
+
+
 
 ########################## Diagnosis Frequency Analysis by Cluster ##########################
 

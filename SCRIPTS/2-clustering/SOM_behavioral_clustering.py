@@ -10,7 +10,7 @@ import os
 # ------------------------------------------------------------
 # PATHS & CONTSTANTS 
 # ------------------------------------------------------------
-TIMESTAMP = "APR_08_2026"
+TIMESTAMP = "APR_17_2026"
 
 ROOT_DIR = "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA"
 INPUT_FILE = ROOT_DIR + "/OUTPUTS/Final/FINAL_GENIAL_DB_without_cluster.csv"
@@ -138,7 +138,7 @@ lin = lambda ij: ij[0] * gy + ij[1]
 # Model selection over K using same SOM
 # -------------------------
 weights = som.get_weights().reshape(-1, p)   # (gx*gy) x p
-Ks = range(3, 9)
+Ks = range(2, 9)
 sil_vals = []
 stability_ari = []
 
@@ -158,6 +158,14 @@ for K in Ks:
     aris = [adjusted_rand_score(runs[i], runs[j])
             for i in range(len(runs)) for j in range(i+1, len(runs))]
     stability_ari.append(np.mean(aris))
+
+k_selection_table = pd.DataFrame({
+    "K": list(Ks),
+    "silhouette": np.round(sil_vals, 4),
+    "stability_ARI": np.round(stability_ari, 4),
+})
+print("\nPer-K silhouette and stability ARI (mean pairwise ARI across KMeans seeds):")
+print(k_selection_table.to_string(index=False))
 
 # Plot selection curves
 plt.figure(figsize=(8,4))
