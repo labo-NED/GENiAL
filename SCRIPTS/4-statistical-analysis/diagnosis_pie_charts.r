@@ -16,7 +16,7 @@ library(stringr)
 library(tibble)
 
 ########################## Import dataset ############################
-TIMESTAMP = 'APR_16_2026'
+TIMESTAMP = 'APR_20_2026'
 # CLUSTERS WITH SOM (+ CONTROLS)
 original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_09_2026.csv")
 
@@ -131,16 +131,16 @@ pie_chart <- ggplot(diag_counts, aes(x = 1, y = count, fill = diagnosis_group)) 
     legend.text = element_text(size = 8)
   ) +
   geom_text(
-    data = diag_counts %>% filter(count > 0),
+    data = diag_counts %>% filter(count > 10),
     aes(
       y = mid,
       label = label,
       angle = angle,
       hjust = hjust
     ),
-    x = 1, # position labels outside the pie
-    size = 3,
-    color = "white",
+    x = 0.8, # position labels outside the pie
+    size = 10,
+    color = "black",
     inherit.aes = FALSE
   )
 
@@ -243,6 +243,7 @@ for (cl in clusters) {
 
 
 
+
 ########################## Pie + stacked bars summary ##########################
 
 # --- Pie chart for whole sample (same diagnosis colors) --- #
@@ -285,13 +286,13 @@ pie_chart_full <- ggplot(overall_diag_counts, aes(x = 1, y = count, fill = diagn
     legend.key.height = unit(0.8, "cm")
   ) +
   scale_fill_manual(values = diagnosis_colors, drop = FALSE)
-# geom_text(
-#   aes(y = mid, label = label, angle = angle, hjust = hjust),
-#   x = 1,
-#   size = 5,
-#   color = "black",
-#   inherit.aes = FALSE
-# )
+geom_text(
+  aes(y = mid, label = label, angle = angle, hjust = hjust),
+  x = 1,
+  size = 5,
+  color = "black",
+  inherit.aes = FALSE
+)
 
 ggsave(
   filename = paste0("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Plots/", TIMESTAMP, "_diagnosis_pie_chart_full_sample_summary.png"),
@@ -319,14 +320,14 @@ stacked_diag <- og_dataset_copy %>%
 
 stacked_bar_plot_100 <- ggplot(stacked_diag, aes(x = cluster, y = count, fill = diagnosis_group)) +
   geom_col(position = position_fill(reverse = TRUE), width = 0.65, color = "white", linewidth = 0.35) +
-  # geom_text(
-  #   data = subset(stacked_diag, label != ""),
-  #   aes(label = label),
-  #   position = position_fill(reverse = TRUE, vjust = 0.5),
-  #   size = 7,
-  #   color = "black",
-  #   lineheight = 0.85
-  # ) +
+  geom_text(
+    data = subset(stacked_diag, label != ""),
+    aes(label = label),
+    position = position_fill(reverse = TRUE, vjust = 0.5),
+    size = 10,
+    color = "black",
+    lineheight = 0.85
+  ) +
   scale_y_continuous(
     labels = function(x) paste0(as.integer(round(x * 100)), "%"),
     expand = expansion(mult = c(0.02, 0.02)),
