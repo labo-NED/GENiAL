@@ -35,10 +35,10 @@ library(ggplot2)
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'APR_17_2026'
-ROOT_DIR = '/Volumes/LaCie/Q1K-EMMA/' # '/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/'
+TIMESTAMP = 'MAY_05_2026'
+ROOT_DIR ='/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/' #'/Volumes/LaCie/Q1K-EMMA/' 
 PLOTS_PATH = paste(ROOT_DIR, 'Plots/', sep='')
-DATABASE_PATH = paste(ROOT_DIR, 'Database/', sep='')
+DATABASE_PATH = paste(ROOT_DIR, 'Clustered/', sep='')
 database_filepath = paste(DATABASE_PATH, 'clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_09_2026.csv', sep='')
 isROIAnalysis = FALSE
 analysis_label = if(isROIAnalysis) "ROI" else "GLOBAL"
@@ -220,6 +220,7 @@ write.csv(db_copy, file.path(paste0(DATABASE_PATH, "merged_clustered_EEG_feature
 
 
 
+
 ######################################################################
 ################## Normality & Distribution ##########################
 ######################################################################
@@ -345,6 +346,7 @@ par(mfrow = c(1, 1))  # Reset layout
 write.csv(normality_results, 
           file.path(paste0(PLOTS_PATH, "normality_tests_", analysis_label, "_", TIMESTAMP, ".csv")),
           row.names = FALSE)
+
 
 
 #################################################################
@@ -529,156 +531,62 @@ invisible(lapply(behavioral_features, function(feat) {
 sink()
 
 
+
+
 ##################################################################
 ################## Pairwise comparisons ##########################
 ##################################################################
 
-# ---- BOX PLOTS ---- #
+# ---- Pairwise t-tests across clusters (plain output) ---- #
 out_dir <- PLOTS_PATH
 
-# Open sink file for emmeans tables
+# Open sink file for t-test tables
 sink(file.path(out_dir,
-               paste0("emmeans_tables_all_features_", analysis_label, "_", TIMESTAMP, ".txt")))
-
-pdf(file.path(out_dir,
-              paste0("boxplots_all_features_with_stars_", analysis_label, "_", TIMESTAMP, ".pdf")),
-    width = 7, height = 5)
+               paste0("ttests_all_features_", analysis_label, "_", TIMESTAMP, ".txt")))
 
 for (feat in eeg_features) {
-  
+
   dat_feat <- prepare_feature_data(df, feat, verbose = FALSE)
   dat_feat$cluster <- droplevels(factor(dat_feat$cluster))
-  dat_feat$sex     <- droplevels(factor(dat_feat$sex))
-  
+
   if (nrow(dat_feat) == 0 || nlevels(dat_feat$cluster) < 2) next
-  
-  # Set reference cluster (only if the reference cluster exists in the data)
-  if (reference_cluster %in% levels(dat_feat$cluster)) {
-    dat_feat$cluster <- relevel(dat_feat$cluster, ref = as.character(reference_cluster))
-  }
-  
-  if (nlevels(dat_feat$sex) < 2) {
-    form <- as.formula(paste(feat, "~ cluster + age_at_test"))
-  } else {
-    form <- as.formula(paste(feat, "~ cluster + age_at_test + sex"))
-  }
-  
-  fit <- lm(form, data = dat_feat)
-  
-  emm   <- emmeans::emmeans(fit, "cluster")
-  
-  # Print emmeans table for this feature
+
+  cluster_levels <- levels(dat_feat$cluster)
+  cluster_pairs  <- combn(cluster_levels, 2, simplify = FALSE)
+
   cat("\n======================\n")
   cat("Feature:", feat, "\n")
   cat("======================\n\n")
-  cat("Estimated Marginal Means:\n")
-  print(emm)
-  cat("\n")
-  
-  pw    <- pairs(emm, adjust = "none")
-  pw_df <- as.data.frame(pw)
-  
-  # Add significance stars to pairwise comparisons
-  pw_df$stars <- sapply(pw_df$p.value, function(pv) {
-    if (is.na(pv)) ""
-    else if (pv < 0.001) "***"
-    else if (pv < 0.01) "**"
-    else if (pv < 0.05) "*"
-    else ""
-  })
-  
-  # Print pairwise comparisons with p-values and stars
-  cat("Pairwise Comparisons:\n")
-  print(pw_df[, c("contrast", "estimate", "SE", "df", "t.ratio", "p.value", "stars")], row.names = FALSE)
-  cat("\n")
-  
-  sig_pw <- pw_df %>% dplyr::filter(p.value < 0.05)
-  
-  n_total <- nrow(dat_feat)
-  
-  y_max   <- max(dat_feat[[feat]], na.rm = TRUE)
-  y_min   <- min(dat_feat[[feat]], na.rm = TRUE)
-  y_range <- y_max - y_min
-  if (y_range == 0) y_range <- 1
-  
-  # Add simple buffer above y-axis (30% of range)
-  y_upper_limit <- y_max + y_range * 0.30
-  
-  p <- ggplot(dat_feat, aes(x = factor(cluster), y = .data[[feat]])) +
-    geom_boxplot(outlier.shape = NA, alpha = 0.6) +
-    geom_point(
-      position = position_jitter(width = 0.15, height = 0),
-      alpha    = 0.5,
-      size     = 1.5,
-      color    = "grey40"
-    ) +
-    stat_summary(
-      fun   = mean,
-      geom  = "point",
-      shape = 23,
-      size  = 2,
-      fill  = "red",
-      color = "red"
-    ) +
-    annotate(
-      "text",
-      x = -Inf, y = Inf,
-      label = paste0("N = ", n_total),
-      hjust = -0.1, vjust = 1.3,
-      size = 3
-    ) +
-    labs(
-      title = paste0("Feature: ", feat),
-      x = "Cluster",
-      y = feat
-    ) +
-    theme_bw() +
-    coord_cartesian(ylim = c(y_min - y_range * 0.05, y_upper_limit))
-  
-  if (nrow(sig_pw) > 0) {
-    parts  <- strsplit(as.character(sig_pw$contrast), " - ")
-    g1_raw <- sapply(parts, `[`, 1)
-    g2_raw <- sapply(parts, `[`, 2)
-    
-    g1_lab <- sub("^cluster", "", g1_raw)
-    g2_lab <- sub("^cluster", "", g2_raw)
-    
-    y_base <- y_max + y_range * 0.05
-    y_step <- y_range * 0.06
-    y_vals <- y_base + (seq_along(g1_lab) - 1) * y_step
-    
-    stars <- sapply(sig_pw$p.value, function(pv) {
-      if (pv < 0.001) "***"
-      else if (pv < 0.01) "**"
-      else "*"
-    })
-    
-    ann_df <- data.frame(
-      xmin        = g1_lab,
-      xmax        = g2_lab,
-      y_position  = y_vals,
-      annotations = stars
-    )
-    
-    p <- p +
-      ggsignif::geom_signif(
-        data   = ann_df,
-        manual = TRUE,
-        aes(xmin = xmin,
-            xmax = xmax,
-            annotations = annotations,
-            y_position = y_position),
-        tip_length = 0.01,
-        textsize   = 4
-      )
+
+  if (length(cluster_pairs) == 0) {
+    cat("Skipped: fewer than 2 clusters available after filtering.\n\n")
+    next
   }
-  
-  print(p)
+
+  for (pair in cluster_pairs) {
+    g1 <- pair[1]
+    g2 <- pair[2]
+
+    x <- dat_feat %>% dplyr::filter(cluster == g1) %>% dplyr::pull(.data[[feat]])
+    y <- dat_feat %>% dplyr::filter(cluster == g2) %>% dplyr::pull(.data[[feat]])
+
+    if (length(x) < 2 || length(y) < 2) {
+      cat(sprintf("%s vs %s: skipped (n < 2 in at least one group)\n", g1, g2))
+      next
+    }
+
+    tt <- t.test(x, y)
+    cat(sprintf(
+      "%s vs %s | n1=%d n2=%d | mean1=%.4f mean2=%.4f | t=%.4f df=%.2f p=%.6g\n",
+      g1, g2, length(x), length(y), mean(x, na.rm = TRUE), mean(y, na.rm = TRUE),
+      unname(tt$statistic), unname(tt$parameter), tt$p.value
+    ))
+  }
+
+  cat("\n")
 }
 
-dev.off()
-
-# Close sink file for emmeans tables
+# Close sink file for t-test tables
 sink()
 
 
