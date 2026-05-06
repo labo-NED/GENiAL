@@ -7,7 +7,7 @@
 library(ggplot2)
 
 ##################### CTS & MANUAL UPDATES ###########################
-TIMESTAMP <- "APR_17_2026"
+TIMESTAMP <- "MAY_06_2026"
 ROOT_DIR <- "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/"
 DATABASE_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Clustered")
 STATS_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Stats")
@@ -171,3 +171,111 @@ dev.off()
 
 cat("Boxplots saved to:\n")
 cat(output_pdf, "\n")
+
+############################ Line Plot (Emmeans) ######################
+library(emmeans)
+library(patchwork)
+
+output_pdf_line <- file.path(STATS_PATH, paste0("eeg_feature_lineplot_corr_features_", TIMESTAMP, ".pdf"))
+
+# Poster-matching theme
+theme_poster <- function() {
+  theme_bw() +
+    theme(
+      legend.position = "none",
+      axis.text = element_text(size = 14, color = "black"),
+      axis.title.y = element_text(size = 14, color = "black"),
+      axis.title.x = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.border = element_rect(color = "black", linewidth = 0.8),
+      plot.background = element_rect(fill = "white", color = NA),
+      panel.background = element_rect(fill = "white", color = NA)
+    )
+}
+
+# Same cluster colors as your boxplots
+cluster_colors <- c(
+  "Cluster 1" = "#08519C",  # Dark blue
+  "Cluster 2" = "#74C476",  # Light green
+  "Cluster 3" = "#238B45",  # Dark green
+  "Cluster 4" = "#6BAED6"   # Light blue
+)
+
+plot_list <- list()
+
+for (feat in present_features) {
+  feat_data <- prepare_feature_data(df, feat, verbose = FALSE)
+  feat_data$cluster <- droplevels(factor(feat_data$cluster))
+  feat_data$sex <- droplevels(factor(feat_data$sex))
+  
+  if (nrow(feat_data) == 0 || nlevels(feat_data$cluster) < 2) next
+  
+  if (reference_cluster %in% levels(feat_data$cluster)) {
+    feat_data$cluster <- relevel(feat_data$cluster, ref = as.character(reference_cluster))
+  }
+  
+  formula <- as.formula(paste(feat, "~ cluster + age_at_test + sex"))
+  model <- lm(formula, data = feat_data)
+  
+  emm <- as.data.frame(emmeans(model, ~ cluster))
+  emm$cluster_label <- paste("Cluster", as.integer(as.character(emm$cluster)) + 1L)
+  emm$cluster_label <- factor(emm$cluster_label, levels = paste("Cluster", 1:4))
+  
+  feat_label <- pretty_feature_name(feat)
+  y_max   <- max(emm$upper.CL)
+  y_range <- max(emm$upper.CL) - min(emm$lower.CL)
+  step    <- y_range * 0.15
+  
+  p <- ggplot(emm, aes(x = cluster_label, y = emmean, group = 1, color = cluster_label)) +
+    geom_line(linewidth = 0.9, color = "grey40", linetype = "solid") +
+    geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                  width = 0.12, linewidth = 0.8, color = "grey40") +
+    geom_point(size = 5, shape = 21,
+               aes(fill = cluster_label), color = "white", stroke = 1.2) +
+    scale_fill_manual(values = cluster_colors) +
+    scale_color_manual(values = cluster_colors) +
+    scale_x_discrete(labels = c(
+      "Cluster 1" = "Cl. 1",
+      "Cluster 2" = "Cl. 2",
+      "Cluster 3" = "Cl. 3",
+      "Cluster 4" = "Cl. 4"
+    )) +
+    labs(x = NULL, y = feat_label) +
+    theme_poster() +
+    # Significance bar between Cluster 2 and Cluster 4
+    annotate("segment",
+             x = "Cluster 2", xend = "Cluster 4",
+             y = y_max + step, yend = y_max + step,
+             linewidth = 0.6, color = "black") +
+    annotate("segment",
+             x = "Cluster 2", xend = "Cluster 2",
+             y = y_max + step, yend = y_max + step * 0.85,
+             linewidth = 0.6, color = "black") +
+    annotate("segment",
+             x = "Cluster 4", xend = "Cluster 4",
+             y = y_max + step, yend = y_max + step * 0.85,
+             linewidth = 0.6, color = "black") +
+    annotate("text",
+             x = 3,
+             y = y_max + step * 1.2,
+             label = "*", size = 6, color = "black") +
+    coord_cartesian(ylim = c(
+      min(emm$lower.CL) - y_range * 0.05,
+      y_max + step * 1.8
+    ))
+  
+  plot_list[[feat]] <- p
+}
+
+# Combine into 3-top + 2-bottom layout with explicit feature order
+combined <- (plot_list[["pow_per_delta_2s"]] | plot_list[["pow_per_low_gamma_2s"]] | plot_list[["pow_per_high_gamma_2s"]]) /
+  (plot_list[["hurst_2s"]] | plot_list[["higuchi_fd_5s"]]) +
+  plot_layout(heights = c(1, 1))
+
+pdf(output_pdf_line, width = 12, height = 6)
+print(combined)
+dev.off()
+
+cat("Line plots saved to:\n")
+cat(output_pdf_line, "\n")

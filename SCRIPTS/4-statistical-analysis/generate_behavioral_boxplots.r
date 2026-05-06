@@ -7,7 +7,7 @@
 library(ggplot2)
 
 ##################### CTS & MANUAL UPDATES ###########################
-TIMESTAMP <- "APR_17_2026"
+TIMESTAMP <- "MAY_06_2026"
 ROOT_DIR <- "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/"
 DATABASE_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Clustered")
 STATS_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Stats")
@@ -154,3 +154,152 @@ dev.off()
 
 cat("Behavioral boxplots saved to:\n")
 cat(output_pdf, "\n")
+
+
+############################ Behavioral Line Plot (Emmeans) ###########
+library(emmeans)
+library(patchwork)
+
+output_pdf_behav <- file.path(STATS_PATH, paste0("behavioral_lineplot_", TIMESTAMP, ".pdf"))
+
+theme_poster <- function() {
+  theme_bw() +
+    theme(
+      axis.text = element_text(size = 12, color = "black"),
+      axis.title.y = element_text(size = 12, color = "black"),
+      axis.title.x = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.border = element_rect(color = "black", linewidth = 0.8),
+      plot.background = element_rect(fill = "white", color = NA),
+      panel.background = element_rect(fill = "white", color = NA),
+      legend.background = element_rect(fill = "white", color = NA),
+      legend.title = element_blank(),
+      legend.text = element_text(size = 10)
+    )
+}
+
+cluster_colors <- c(
+  "Cluster 1" = "#08519C",
+  "Cluster 2" = "#74C476",
+  "Cluster 3" = "#238B45",
+  "Cluster 4" = "#6BAED6"
+)
+
+# T-score features (same scale — plot together)
+tscore_features <- c(
+  "SRS_restrictive_repetitive_tscore",
+  "SRS_social_communication_tscore",
+  "SRS_social_cognition_tscore",
+  "attention_deficit_hyperactivity_tscore"
+)
+
+# Feature line colors and labels
+feature_colors <- c(
+  "SRS_restrictive_repetitive_tscore"     = "#C0392B",
+  "SRS_social_communication_tscore"       = "#E67E22",
+  "SRS_social_cognition_tscore"           = "#F1C40F",
+  "attention_deficit_hyperactivity_tscore"= "#8E44AD"
+)
+
+feature_labels <- c(
+  "SRS_restrictive_repetitive_tscore"     = "RRB",
+  "SRS_social_communication_tscore"       = "Social Comm.",
+  "SRS_social_cognition_tscore"           = "Social Cog.",
+  "attention_deficit_hyperactivity_tscore"= "ADHD Traits"
+)
+
+# Collect emmeans for all t-score features
+emm_all <- data.frame()
+
+for (feat in tscore_features) {
+  if (!feat %in% names(df)) next
+  
+  feat_data <- prepare_feature_data(df, feat, verbose = FALSE)
+  feat_data$cluster <- droplevels(factor(feat_data$cluster))
+  feat_data$sex <- droplevels(factor(feat_data$sex))
+  
+  if (nrow(feat_data) == 0 || nlevels(feat_data$cluster) < 2) next
+  
+  if (reference_cluster %in% levels(feat_data$cluster)) {
+    feat_data$cluster <- relevel(feat_data$cluster, ref = as.character(reference_cluster))
+  }
+  
+  formula <- as.formula(paste(feat, "~ cluster + age_at_test + sex"))
+  model <- lm(formula, data = feat_data)
+  
+  emm <- as.data.frame(emmeans(model, ~ cluster))
+  emm$feature <- feat
+  emm_all <- rbind(emm_all, emm)
+}
+
+emm_all$cluster_label <- paste("Cluster", as.integer(as.character(emm_all$cluster)) + 1L)
+emm_all$cluster_label <- factor(emm_all$cluster_label, levels = paste("Cluster", 1:4))
+emm_all$feature_label <- feature_labels[emm_all$feature]
+emm_all$feature_label <- factor(emm_all$feature_label, levels = feature_labels)
+
+# --- Combined t-score line plot ---
+p_tscore <- ggplot(emm_all, aes(x = cluster_label, y = emmean,
+                                group = feature_label, color = feature_label)) +
+  geom_line(linewidth = 0.9) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.12, linewidth = 0.6) +
+  geom_point(size = 4, shape = 21, fill = "white", stroke = 1.2) +
+  scale_color_manual(values = setNames(feature_colors, feature_labels)) +
+  scale_x_discrete(labels = c(
+    "Cluster 1" = "Cl. 1", "Cluster 2" = "Cl. 2",
+    "Cluster 3" = "Cl. 3", "Cluster 4" = "Cl. 4"
+  )) +
+  # Reference line at t-score mean
+  geom_hline(yintercept = 50, linetype = "dashed",
+             color = "grey60", linewidth = 0.5) +
+  labs(x = NULL, y = "T-score") +
+  theme_poster()
+
+# --- Nonverbal IQ separate panel ---
+feat_iq <- "nonverbal_iq"
+emm_iq  <- NULL
+
+if (feat_iq %in% names(df)) {
+  feat_data_iq <- prepare_feature_data(df, feat_iq, verbose = FALSE)
+  feat_data_iq$cluster <- droplevels(factor(feat_data_iq$cluster))
+  feat_data_iq$sex <- droplevels(factor(feat_data_iq$sex))
+  
+  if (reference_cluster %in% levels(feat_data_iq$cluster)) {
+    feat_data_iq$cluster <- relevel(feat_data_iq$cluster,
+                                    ref = as.character(reference_cluster))
+  }
+  
+  model_iq <- lm(nonverbal_iq ~ cluster + age_at_test + sex, data = feat_data_iq)
+  emm_iq   <- as.data.frame(emmeans(model_iq, ~ cluster))
+  emm_iq$cluster_label <- paste("Cluster", as.integer(as.character(emm_iq$cluster)) + 1L)
+  emm_iq$cluster_label <- factor(emm_iq$cluster_label, levels = paste("Cluster", 1:4))
+  
+  p_iq <- ggplot(emm_iq, aes(x = cluster_label, y = emmean, group = 1)) +
+    geom_line(linewidth = 0.9, color = "grey40") +
+    geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                  width = 0.12, linewidth = 0.6, color = "grey40") +
+    geom_point(size = 4, shape = 21, fill = "#2C3E50",
+               color = "white", stroke = 1.2) +
+    scale_x_discrete(labels = c(
+      "Cluster 1" = "Cl. 1", "Cluster 2" = "Cl. 2",
+      "Cluster 3" = "Cl. 3", "Cluster 4" = "Cl. 4"
+    )) +
+    labs(x = NULL, y = "Nonverbal IQ") +
+    theme_poster() +
+    theme(legend.position = "none")
+}
+
+# --- Combine ---
+pdf(output_pdf_behav, width = 12, height = 3)
+
+if (!is.null(emm_iq)) {
+  print(p_tscore + p_iq + plot_layout(widths = c(2.5, 1)))
+} else {
+  print(p_tscore)
+}
+
+dev.off()
+
+cat("Behavioral line plots saved to:\n")
+cat(output_pdf_behav, "\n")
