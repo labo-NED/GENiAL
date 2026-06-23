@@ -16,7 +16,7 @@ library(stringr)
 library(tibble)
 
 ########################## Import dataset ############################
-TIMESTAMP = 'APR_20_2026'
+TIMESTAMP = 'JUN_15_2026'
 # CLUSTERS WITH SOM (+ CONTROLS)
 original_dataset <- read.csv("/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/Clustered/clustered_SOM_Q1K_CHU_MHC_BC_DATA_MAR_09_2026.csv")
 
@@ -128,7 +128,7 @@ pie_chart <- ggplot(diag_counts, aes(x = 1, y = count, fill = diagnosis_group)) 
   theme(
     plot.title = element_text(hjust = 0, size = 12, face = "bold"),
     legend.title = element_text(size = 8),
-    legend.text = element_text(size = 8)
+    legend.text = element_text(size = 22)
   ) +
   geom_text(
     data = diag_counts %>% filter(count > 10),
@@ -324,7 +324,7 @@ stacked_bar_plot_100 <- ggplot(stacked_diag, aes(x = cluster, y = count, fill = 
     data = subset(stacked_diag, label != ""),
     aes(label = label),
     position = position_fill(reverse = TRUE, vjust = 0.5),
-    size = 10,
+    size = 8,
     color = "black",
     lineheight = 0.85
   ) +
@@ -344,15 +344,15 @@ stacked_bar_plot_100 <- ggplot(stacked_diag, aes(x = cluster, y = count, fill = 
     # fill = "Diagnosis"
   ) +
   coord_flip() +
-  theme_minimal(base_size = 22) +
+  theme_minimal(base_size = 20) +
   theme(
     legend.position = "none",
     plot.margin = margin(12, 16, 12, 16),
     # legend.title = element_text(size = 16),
     # legend.text = element_text(size = 14),
     panel.grid.major.y = element_blank(),
-    axis.text = element_text(size = 22),
-    axis.title = element_text(size = 24)
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 22)
   )
 
 ggsave(

@@ -7,7 +7,7 @@
 library(ggplot2)
 
 ##################### CTS & MANUAL UPDATES ###########################
-TIMESTAMP <- "MAY_06_2026"
+TIMESTAMP <- "JUN_16_2026"
 ROOT_DIR <- "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/"
 DATABASE_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Clustered")
 STATS_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Stats")
@@ -124,46 +124,177 @@ pretty_feature_name <- function(feat) {
 }
 
 ############################ Boxplots ################################
-output_pdf <- file.path(STATS_PATH, paste0("eeg_feature_boxplots_corr_features_", TIMESTAMP, ".pdf"))
+output_pdf <- file.path(
+  STATS_PATH,
+  paste0("eeg_feature_boxplots_corr_features_", TIMESTAMP, ".pdf")
+)
 
-pdf(output_pdf, width = 8, height = 6)
+pdf(output_pdf, width = 5, height = 4.5)
 
 for (feat in present_features) {
+  
   feat_data <- prepare_feature_data(df, feat, verbose = TRUE)
   feat_data$cluster <- droplevels(factor(feat_data$cluster))
   feat_data$sex <- droplevels(factor(feat_data$sex))
-
+  
   if (nrow(feat_data) == 0 || nlevels(feat_data$cluster) < 2) {
-    warning(paste0("Skipping feature due to insufficient data after exclusions: ", feat))
+    warning(paste0(
+      "Skipping feature due to insufficient data after exclusions: ",
+      feat
+    ))
     next
   }
-
-  # Keep the same reference cluster used in LM models (if present)
+  
+  # Keep same reference cluster used in LM models
   if (reference_cluster %in% levels(feat_data$cluster)) {
-    feat_data$cluster <- relevel(feat_data$cluster, ref = as.character(reference_cluster))
+    feat_data$cluster <- relevel(
+      feat_data$cluster,
+      ref = as.character(reference_cluster)
+    )
   }
-
+  
   n_total <- nrow(feat_data)
-  feat_label <- pretty_feature_name(feat)
-
-  p <- ggplot(feat_data, aes(x = cluster, y = .data[[feat]])) +
-    geom_boxplot(color = "black", fill = NA, linewidth = 0.8, outlier.shape = NA) +
-    geom_jitter(aes(color = cluster), width = 0.15, height = 0, alpha = 0.6, size = 5) +
+  
+  # Rescale very small power values for plotting only
+  scale_factor <- 1
+  
+  if (feat == "pow_per_delta_2s") {
+    # scale_factor <- 1e12
+    feat_label <- "Delta Power"
+  } else if (feat == "pow_per_low_gamma_2s") {
+    # scale_factor <- 1e14
+    feat_label <- "Low Gamma Power"
+  } else if (feat == "pow_per_high_gamma_2s") {
+    # scale_factor <- 1e14
+    feat_label <- "High Gamma Power"
+  } else {
+    feat_label <- pretty_feature_name(feat)
+  }
+  
+  plot_value <- paste0(feat, "_plot")
+  feat_data[[plot_value]] <- feat_data[[feat]] * scale_factor
+  
+  # Calculate position of significance bar
+  y_max <- max(feat_data[[plot_value]], na.rm = TRUE)
+  y_min <- min(feat_data[[plot_value]], na.rm = TRUE)
+  y_range <- y_max - y_min
+  
+  if (y_range == 0) {
+    y_range <- abs(y_max) * 0.1
+  }
+  if (y_range == 0) {
+    y_range <- 1
+  }
+  
+  bar_y <- y_max + 0.08 * y_range
+  tick_y <- y_max + 0.04 * y_range
+  star_y <- y_max + 0.11 * y_range
+  
+  p <- ggplot(
+    feat_data,
+    aes(x = cluster, y = .data[[plot_value]])
+  ) +
+    
+    geom_boxplot(
+      color = "black",
+      fill = NA,
+      linewidth = 0.8,
+      outlier.shape = NA
+    ) +
+    
+    geom_jitter(
+      aes(color = cluster),
+      width = 0.15,
+      height = 0,
+      alpha = 0.6,
+      size = 3.5
+    ) +
+    
     labs(
-      # title = paste0("Boxplot by Cluster: ", feat_label, " (N = ", n_total, ")"),
       x = NULL,
       y = feat_label
     ) +
-    scale_color_manual(values = cluster_colors, drop = FALSE) +
-    scale_x_discrete(labels = function(x) paste("Cluster", as.integer(as.character(x)) + 1L)) +
-    theme_bw() +
+    
+    scale_color_manual(
+      values = cluster_colors,
+      drop = FALSE
+    ) +
+    
+    scale_x_discrete(
+      labels = function(x)
+        paste(as.integer(as.character(x)) + 1L)
+    ) +
+    
+    # Significance bar: Cluster 2 vs Cluster 4
+    annotate(
+      "segment",
+      x = 1, xend = 3,
+      y = bar_y, yend = bar_y,
+      linewidth = 0.8
+    ) +
+    
+    annotate(
+      "segment",
+      x = 1, xend = 1,
+      y = tick_y, yend = bar_y,
+      linewidth = 0.8
+    ) +
+    
+    annotate(
+      "segment",
+      x = 3, xend = 3,
+      y = tick_y, yend = bar_y,
+      linewidth = 0.8
+    ) +
+    
+    annotate(
+      "text",
+      x = 2,
+      y = star_y,
+      label = "*",
+      size = 8
+    ) +
+    
+    coord_cartesian(
+      ylim = c(
+        y_min,
+        y_max + 0.18 * y_range
+      )
+    ) +
+    
+    theme_bw(base_size = 16) +
+    
     theme(
       legend.position = "none",
-      axis.text = element_text(size = 22),
-      axis.title = element_text(size = 22)
-      # plot.title = element_text(size = 16, face = "bold")
+      
+      axis.text.x = element_text(
+        size = 24,
+        color = "black"
+      ),
+      
+      axis.text.y = element_text(
+        size = 18,
+        color = "black"
+      ),
+      
+      axis.title.y = element_text(
+        size = 24,
+        color = "black"
+      ),
+      
+      axis.title.x = element_blank(),
+      
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      
+      plot.margin = margin(
+        t = 8,
+        r = 8,
+        b = 8,
+        l = 8
+      )
     )
-
+  
   print(p)
 }
 

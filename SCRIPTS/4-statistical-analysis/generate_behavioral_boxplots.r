@@ -7,7 +7,7 @@
 library(ggplot2)
 
 ##################### CTS & MANUAL UPDATES ###########################
-TIMESTAMP <- "MAY_06_2026"
+TIMESTAMP <- "JUN_16_2026"
 ROOT_DIR <- "/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/"
 DATABASE_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Clustered")
 STATS_PATH <- file.path(ROOT_DIR, "DATA/OUTPUTS/Stats")
@@ -90,11 +90,11 @@ prepare_feature_data <- function(df, feat, verbose = TRUE) {
 # Pretty display labels for behavioral features
 pretty_behavioral_name <- function(feat) {
   custom_labels <- c(
-    "SRS_restrictive_repetitive_tscore" = "Restrictive and Repetitive Behavior",
+    "SRS_restrictive_repetitive_tscore" = "RRB",
     "SRS_social_communication_tscore" = "Social Communication",
     "SRS_social_cognition_tscore" = "Social Cognition",
     "attention_deficit_hyperactivity_tscore" = "ADHD Traits",
-    "nonverbal_iq" = "Nonverbal IQ"
+    "nonverbal_iq" = "NVIQ"
   )
 
   if (feat %in% names(custom_labels)) {
@@ -109,44 +109,177 @@ pretty_behavioral_name <- function(feat) {
 ############################ Boxplots ################################
 output_pdf <- file.path(STATS_PATH, paste0("behavioral_feature_boxplots_", TIMESTAMP, ".pdf"))
 
-pdf(output_pdf, width = 8, height = 6)
+plot_order <- c("3", "0", "1", "2")
+
+# Significant comparisons against reference Cluster 4
+# Raw cluster coding: 0 = Cluster 1, 1 = Cluster 2, 2 = Cluster 3, 3 = Cluster 4
+sig_pairs <- list(
+  "SRS_restrictive_repetitive_tscore"      = list(c("0", "3"), c("1", "3"), c("2", "3")),
+  "SRS_social_communication_tscore"        = list(c("0", "3"), c("1", "3"), c("2", "3")),
+  "SRS_social_cognition_tscore"            = list(c("0", "3"), c("1", "3"), c("2", "3")),
+  "attention_deficit_hyperactivity_tscore" = list(c("0", "3"), c("1", "3")),
+  "nonverbal_iq"                           = list(c("1", "3"), c("2", "3"))
+)
+
+pdf(output_pdf, width = 5, height = 4.5)
 
 for (feat in behavioral_features) {
+  
   dat_feat <- prepare_feature_data(df, feat, verbose = TRUE)
-  dat_feat$cluster <- droplevels(dat_feat$cluster)
-  dat_feat$sex <- droplevels(dat_feat$sex)
-
+  dat_feat$cluster <- droplevels(factor(dat_feat$cluster))
+  dat_feat$sex <- droplevels(factor(dat_feat$sex))
+  
   if (nrow(dat_feat) == 0 || nlevels(dat_feat$cluster) < 2) {
     warning(paste0("Skipping feature due to insufficient data after NA removal: ", feat))
     next
   }
-
-  if (reference_cluster %in% levels(dat_feat$cluster)) {
-    dat_feat$cluster <- relevel(dat_feat$cluster, ref = as.character(reference_cluster))
-  }
-
+  
+  # Force plotting order: Cluster 1, 2, 3, 4
+  dat_feat$cluster <- factor(
+    dat_feat$cluster,
+    levels = plot_order
+  )
+  
   n_total <- nrow(dat_feat)
   feat_label <- pretty_behavioral_name(feat)
-
-  p <- ggplot(dat_feat, aes(x = cluster, y = .data[[feat]])) +
-    geom_boxplot(color = "black", fill = NA, linewidth = 0.8, outlier.shape = NA) +
-    geom_jitter(aes(color = cluster), width = 0.15, height = 0, alpha = 0.6, size = 5) +
+  
+  y_max <- max(dat_feat[[feat]], na.rm = TRUE)
+  y_min <- min(dat_feat[[feat]], na.rm = TRUE)
+  y_range <- y_max - y_min
+  
+  if (y_range == 0) {
+    y_range <- abs(y_max) * 0.1
+  }
+  if (y_range == 0) {
+    y_range <- 1
+  }
+  
+  p <- ggplot(
+    dat_feat,
+    aes(x = cluster, y = .data[[feat]])
+  ) +
+    
+    geom_boxplot(
+      color = "black",
+      fill = NA,
+      linewidth = 0.8,
+      outlier.shape = NA
+    ) +
+    
+    geom_jitter(
+      aes(color = cluster),
+      width = 0.15,
+      height = 0,
+      alpha = 0.6,
+      size = 3.5
+    ) +
+    
     labs(
-      # title = paste0("Boxplot by Cluster: ", feat_label, " (N = ", n_total, ")"),
       x = NULL,
       y = feat_label
     ) +
-    scale_y_continuous(limits = c(30, 100)) +
-    scale_color_manual(values = cluster_colors, drop = FALSE) +
-    scale_x_discrete(labels = function(x) paste("Cluster", as.integer(as.character(x)) + 1L)) +
-    theme_bw() +
+    
+    scale_color_manual(
+      values = cluster_colors,
+      drop = FALSE
+    ) +
+    
+    scale_x_discrete(
+      limits = plot_order,
+      labels = c(
+        "3" = "4",
+        "0" = "1",
+        "1" = "2",
+        "2" = "3"
+      )
+    ) +
+    
+    theme_bw(base_size = 16) +
+    
     theme(
       legend.position = "none",
-      axis.text = element_text(size = 20),
-      axis.title = element_text(size = 20),
-      # plot.title = element_text(size = 16, face = "bold")
+      
+      axis.text.x = element_text(
+        size = 24,
+        color = "black"
+      ),
+      
+      axis.text.y = element_text(
+        size = 18,
+        color = "black"
+      ),
+      
+      axis.title.y = element_text(
+        size = 24,
+        color = "black"
+      ),
+      
+      axis.title.x = element_blank(),
+      
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor = element_blank(),
+      
+      plot.margin = margin(
+        t = 8,
+        r = 8,
+        b = 8,
+        l = 8
+      )
     )
-
+  
+  # Add significance bars
+  if (feat %in% names(sig_pairs)) {
+    
+    pairs <- sig_pairs[[feat]]
+    
+    for (i in seq_along(pairs)) {
+      pair <- pairs[[i]]
+      
+      bar_y <- y_max + (0.08 + (i - 1) * 0.08) * y_range
+      tick_y <- bar_y - 0.03 * y_range
+      star_y <- bar_y + 0.025 * y_range
+      
+      p <- p +
+        annotate(
+          "segment",
+          x = pair[1], xend = pair[2],
+          y = bar_y, yend = bar_y,
+          linewidth = 0.8
+        ) +
+        
+        annotate(
+          "segment",
+          x = pair[1], xend = pair[1],
+          y = tick_y, yend = bar_y,
+          linewidth = 0.8
+        ) +
+        
+        annotate(
+          "segment",
+          x = pair[2], xend = pair[2],
+          y = tick_y, yend = bar_y,
+          linewidth = 0.8
+        ) +
+        
+        annotate(
+          "text",
+          x = mean(match(pair, plot_order)),
+          y = star_y,
+          label = "***",
+          size = 8
+        )
+    }
+    
+    ylim_top <- y_max + (0.18 + length(pairs) * 0.08) * y_range
+  } else {
+    ylim_top <- y_max + 0.10 * y_range
+  }
+  
+  p <- p +
+    coord_cartesian(
+      ylim = c(y_min, ylim_top)
+    )
+  
   print(p)
 }
 

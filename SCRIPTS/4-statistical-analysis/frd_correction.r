@@ -76,3 +76,26 @@ cluster_results <- data.frame(
 print(results, digits = 5, na.print = ".")
 cat("\n")
 print(cluster_results, digits = 5, na.print = ".")
+
+#=====================
+# Pairwise comparisons FDR corrections
+
+pvals_hurst <- c(
+  0.934531,  # 0 vs 1
+  0.509556,  # 0 vs 2
+  0.0330893, # 0 vs 3
+  0.402782,  # 1 vs 2
+  0.0203224, # 1 vs 3
+  0.087172  # 2 vs 3
+)
+p.adjust(pvals_hurst, method = "fdr")
+
+
+
+
+
+
+
+
+
+

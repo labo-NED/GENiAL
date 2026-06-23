@@ -30,12 +30,13 @@ library(dplyr)
 library(emmeans)
 library(ggsignif)
 library(ggplot2)
+library(knitr)
 
 
 ######################################################################
 ##################### CTS & MANUAL UPDATES ###########################
 ######################################################################
-TIMESTAMP = 'MAY_05_2026'
+TIMESTAMP = 'JUN_08_2026'
 ROOT_DIR ='/Users/emmanuelle.coutu-nadeau/Code/NED LAB/GENiAL/DATA/OUTPUTS/' #'/Volumes/LaCie/Q1K-EMMA/' 
 PLOTS_PATH = paste(ROOT_DIR, 'Plots/', sep='')
 DATABASE_PATH = paste(ROOT_DIR, 'Clustered/', sep='')
@@ -347,7 +348,54 @@ write.csv(normality_results,
           file.path(paste0(PLOTS_PATH, "normality_tests_", analysis_label, "_", TIMESTAMP, ".csv")),
           row.names = FALSE)
 
+#################################################################
+############### Age differences between clusters ################
+#################################################################
 
+# Make sure cluster is treated as categorical
+df <- db_copy
+df$cluster <- factor(df$cluster, levels = c(0, 1, 2, 3))
+
+# Descriptive age statistics by cluster
+age_by_cluster <- df |>
+  group_by(cluster) |>
+  summarise(
+    n = sum(!is.na(age_at_test)),
+    mean_age = mean(age_at_test, na.rm = TRUE),
+    sd_age = sd(age_at_test, na.rm = TRUE),
+    median_age = median(age_at_test, na.rm = TRUE),
+    min_age = min(age_at_test, na.rm = TRUE),
+    max_age = max(age_at_test, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(age_by_cluster)
+
+# Check normality of age within each cluster
+by(df$age_at_test, df$cluster, shapiro.test)
+
+# ANOVA: age differences between clusters
+age_anova <- aov(age_at_test ~ cluster, data = df)
+summary(age_anova)
+
+# If ANOVA is significant, run post-hoc comparisons
+TukeyHSD(age_anova)
+
+# Non-parametric alternative
+kruskal.test(age_at_test ~ cluster, data = df)
+
+# Optional: pairwise Wilcoxon tests if Kruskal-Wallis is significant
+pairwise.wilcox.test(
+  df$age_at_test,
+  df$cluster,
+  p.adjust.method = "fdr"
+)
+
+# Check age distribution by cluster
+
+ggplot(df, aes(x = age_at_test)) +
+  geom_histogram(bins = 15) +
+  facet_wrap(~cluster)
 
 #################################################################
 ############################ LM #################################
